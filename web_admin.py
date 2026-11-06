@@ -81,7 +81,7 @@ def index():
                 file_r = requests.get(latest["download_url"], timeout=10)
                 file_data = file_r.json()
                 
-                html = """
+                html = f"""
                 <div class="card">
                     <h2>Последний результат</h2>
                     <p><b>Дата:</b> {file_data.get('date', '—')}</p>
@@ -155,7 +155,7 @@ def index():
         <div class="card">
             <h2>График выполнения</h2>
             <p style="color: #7f8c8d; font-size: 14px;">Время указывается по Москве (МСК)</p>
-            {msg}
+            
             <form method="POST" style="font-size: 16px;">
                 <input type="hidden" name="selected_mode" id="selected_mode" value="daily">
                 <div style="margin-bottom: 15px;">

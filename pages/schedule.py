@@ -62,7 +62,7 @@ def get_schedule_html(request):
                 if not (1 <= month_interval <= 12 and 0 <= h <= 23 and 0 <= m <= 59):
                     raise ValueError("Неверные параметры месяца")
                 h_utc = (h - 3) % 24
-                cron = f"{m} {h_utc} */{month_interval} * *"
+                cron = f"{m} {h_utc} 1 */{month_interval} *"
                 msg_text = f"каждые {month_interval} месяцев в {h:02d}:{m:02d} МСК"
             else:
                 raise ValueError('Неизвестный режим')

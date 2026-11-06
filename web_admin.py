@@ -176,11 +176,11 @@ def index():
                 <button type="submit" style="background: #27ae60; color: white; padding: 10px 20px; border: none; border-radius: 4px; font-size: 16px; cursor: pointer;">Сохранить</button>
             </form>
             <script>
-                document.querySelectorAll('input[name="type"]').forEach(function(radio) {
+                document.querySelectorAll('input[name="type"]').forEach(function(radio) {{
                     radio.addEventListener('change', function() {
                         document.getElementById('selected_mode').value = this.value;
-                    });
-                });
+                    }});
+                }});
             </script>
         </div>
         """

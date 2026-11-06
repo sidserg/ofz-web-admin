@@ -79,8 +79,6 @@ def get_schedule_html(request):
             put_r = requests.put(url, headers=headers, json=put_data, timeout=(5, 10))
             put_r.raise_for_status()
             msg = f"<p style='color:green;'>Успех! Бот будет запускаться {msg_text}.</p>"
-            h_msk = h
-            m = m
         except Exception as e:
             msg = f"<p style='color:red;'>Ошибка: {e}</p>"
 

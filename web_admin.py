@@ -7,14 +7,12 @@ app = Flask(__name__)
 auth = HTTPBasicAuth()
 
 # Логин и пароль для доступа (измените на свои)
-USERS = {
-    "admin": "007"
-}
+
 
 @auth.verify_password
 def verify_password(username, password):
-    if username in USERS and USERS[username] == password:
-        return username
+    if password == "007":
+        return "admin"
     return None
 
 

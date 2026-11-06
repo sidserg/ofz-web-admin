@@ -24,8 +24,11 @@ HTML = """
         p { margin: 3px 0; font-size: 15px; color: #000; }
         ul { list-style: none; padding: 0; margin: 0; }
         li { padding: 2px 0; font-size: 15px; color: #000; }
-        input[type="number"] { padding: 5px; font-size: 14px; width: 60px; border: 1px solid #ccc; border-radius: 4px; }
-        button { padding: 10px 20px; font-size: 16px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 10px; }
+        input[type="number"] { padding: 8px; font-size: 16px; width: 70px; border: 1px solid #ccc; border-radius: 4px; margin: 0 5px; }
+        button { padding: 10px 20px; font-size: 16px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 15px; }
+        label { display: inline-block; margin-bottom: 10px; font-size: 16px; }
+        .schedule-row { margin-bottom: 15px; padding: 10px; border-radius: 5px; }
+        .schedule-row.active { background: #f0f8ff; }
         @media (max-width: 600px) {
             body { flex-direction: column; }
             .sidebar { width: 100%; flex-direction: row; overflow-x: auto; }

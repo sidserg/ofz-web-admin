@@ -104,10 +104,25 @@ def index():
     elif tab == 'schedule':
         if request.method == 'POST':
             try:
-                h = int(request.form['hour'])
-                m = int(request.form['minute'])
-                h_utc = (h - 3) % 24
-                cron = f"{m} {h_utc} * * *"
+                mode = request.form.get('type', 'daily')
+                
+                if mode == 'minute':
+                    interval = int(request.form['interval_minutes'])
+                    cron = f"*/{interval} * * * *"
+                elif mode == 'daily':
+                    h = int(request.form['hour'])
+                    m = int(request.form['minute'])
+                    h_utc = (h - 3) % 24
+                    cron = f"{m} {h_utc} * * *"
+                elif mode == 'monthly':
+                    month_interval = int(request.form['interval_months'])
+                    h = int(request.form['hour_m'])
+                    m = int(request.form['minute_m'])
+                    h_utc = (h - 3) % 24
+                    cron = f"{m} {h_utc} */{month_interval} * *"
+                else:
+                    raise Exception('Неизвестный режим')
+                
                 
                 headers = {'Authorization': f'token {MY_TOKEN}', 'Accept': 'application/vnd.github.v3+json'}
                 url = f'https://api.github.com/repos/{REPO}/contents/.github/workflows/bot.yml'
@@ -138,8 +153,8 @@ def index():
             {msg}
             <form method="POST" style="font-size: 16px;">
                 <div style="margin-bottom: 15px;">
-                    <label><input type="radio" name="type" value="minute" disabled> Каждые 
-                    <input type="number" value="15" disabled style="width: 60px;"> минут(ы)</label>
+                    <label><input type="radio" name="type" value="minute" onclick="this.form.submit()"> Каждые 
+                    <input type="number" name="interval_minutes" value="15" style="width: 60px;"> минут(ы)</label>
                 </div>
                 <div style="margin-bottom: 15px; background: #f0f8ff; padding: 10px; border-radius: 5px;">
                     <label><input type="radio" name="type" value="daily" checked> Каждый день в</label>
@@ -147,10 +162,10 @@ def index():
                     <input type="number" name="minute" min="0" max="59" value="0" required style="width: 60px;">
                 </div>
                 <div style="margin-bottom: 15px;">
-                    <label><input type="radio" name="type" value="monthly" disabled> Каждые 
-                    <input type="number" value="1" disabled style="width: 50px;"> месяца в</label>
-                    <input type="number" value="19" disabled style="width: 60px; margin-left: 10px;"> :
-                    <input type="number" value="0" disabled style="width: 60px;">
+                    <label><input type="radio" name="type" value="monthly"> Каждые 
+                    <input type="number" name="interval_months" value="1" style="width: 50px;"> месяца в</label>
+                    <input type="number" name="hour_m" value="19" style="width: 60px; margin-left: 10px;"> :
+                    <input type="number" name="minute_m" value="0" style="width: 60px;">
                 </div>
                 <button type="submit" style="background: #27ae60; color: white; padding: 10px 20px; border: none; border-radius: 4px; font-size: 16px; cursor: pointer;">Сохранить</button>
             </form>

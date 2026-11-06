@@ -2,3 +2,4 @@ https://gh-proxy.com/https://github.com/Invest-SDK/invest-python/raw/refs/heads/
 Flask
 requests
 gunicorn
+flask-httpauth

@@ -1,6 +1,22 @@
 from flask import Flask, request, redirect, url_for, render_template_string
+from flask_httpauth import HTTPBasicAuth
 from pages.status import get_status_html
 from pages.schedule import get_schedule_html
+
+app = Flask(__name__)
+auth = HTTPBasicAuth()
+
+# Логин и пароль для доступа (измените на свои)
+USERS = {
+    "admin": "ofz2024"
+}
+
+@auth.verify_password
+def verify_password(username, password):
+    if username in USERS and USERS[username] == password:
+        return username
+    return None
+
 
 app = Flask(__name__)
 
@@ -54,10 +70,12 @@ HTML = """
 """
 
 @app.route('/')
+@auth.login_required
 def index():
     return redirect(url_for('status_page'))
 
 @app.route('/status')
+@auth.login_required
 def status_page():
     try:
         content = get_status_html()
@@ -66,6 +84,7 @@ def status_page():
     return render_template_string(HTML, content=content, request=request)
 
 @app.route('/schedule', methods=['GET', 'POST'])
+@auth.login_required
 def schedule_page():
     try:
         content = get_schedule_html(request)

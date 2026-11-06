@@ -59,12 +59,18 @@ def index():
 
 @app.route('/status')
 def status_page():
-    content = get_status_html()
+    try:
+        content = get_status_html()
+    except Exception as e:
+        content = f"<h2 style='color:red'>Ошибка загрузки: {e}</h2>"
     return render_template_string(HTML, content=content, request=request)
 
 @app.route('/schedule', methods=['GET', 'POST'])
 def schedule_page():
-    content = get_schedule_html(request)
+    try:
+        content = get_schedule_html(request)
+    except Exception as e:
+        content = f"<h2 style='color:red'>Ошибка расписания: {e}</h2>"
     return render_template_string(HTML, content=content, request=request)
 
 if __name__ == '__main__':

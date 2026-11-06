@@ -54,7 +54,8 @@ HTML = """
 
 @app.route('/')
 def index():
-    return status_bp.view_functions['get_status']()
+    from flask import redirect, url_for
+    return redirect(url_for('status.get_status'))
 
 @app.route('/status')
 def status_page():

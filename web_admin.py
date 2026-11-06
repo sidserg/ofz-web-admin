@@ -2,6 +2,7 @@ from flask import Flask, request, redirect, url_for, render_template_string
 from pages.status import get_status_html
 from pages.schedule import get_schedule_html
 from pages.settings import get_settings_html
+from pages.calendar import get_calendar_html
 
 app = Flask(__name__)
 
@@ -67,6 +68,7 @@ HTML = """
         <a href="/status" class="{{ 'active' if request.path == '/status' else '' }}">Статус</a>
         <a href="/schedule" class="{{ 'active' if request.path == '/schedule' else '' }}">Расписание</a>
         <a href="/settings" class="{{ 'active' if request.path == '/settings' else '' }}">Настройки</a>
+        <a href="/calendar" class="{{ 'active' if request.path == '/calendar' else '' }}">Календарь</a>
     </div>
     <div class="main">
         <div class="content">
@@ -125,6 +127,16 @@ def settings_page():
         content = get_settings_html(request)
     except Exception as e:
         content = f"<h2 style='color:red'>Ошибка настроек: {e}</h2>"
+    return render_template_string(HTML, content=content, request=request)
+
+@app.route('/calendar')
+def calendar_page():
+    if not check_auth():
+        return redirect(url_for('login'))
+    try:
+        content = get_calendar_html(request)
+    except Exception as e:
+        content = f"<h2 style='color:red'>Ошибка календаря: {e}</h2>"
     return render_template_string(HTML, content=content, request=request)
 
 if __name__ == '__main__':

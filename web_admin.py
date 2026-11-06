@@ -81,5 +81,15 @@ def schedule_page():
         content = f"<h2 style='color:red'>Ошибка расписания: {e}</h2>"
     return render_template_string(HTML, content=content, request=request)
 
+@app.route('/settings', methods=['GET', 'POST'])
+def settings_page():
+    if not check_auth():
+        return redirect(url_for('login'))
+    try:
+        content = get_settings_html(request)
+    except Exception as e:
+        content = f"<h2 style='color:red'>Ошибка настроек: {e}</h2>"
+    return render_template_string(HTML, content=content, request=request)
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

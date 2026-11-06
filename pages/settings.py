@@ -1,6 +1,7 @@
 import requests
 import base64
 import json
+from nacl import encoding, public
 
 PART1 = 'Z2hwX2pQanAyS3FKMDdia3drYWIz'
 PART2 = 'OFFEUG1KVWRFVW5xNjRRS09UZA=='
@@ -16,9 +17,7 @@ DEFAULTS = {
     'portfolio_creation_budget': 6000,
 }
 
-
 def _fetch_config():
-    """Reads config.json from GitHub. Returns (config: dict, sha: str)."""
     r = requests.get(API_URL, headers=HEADERS, timeout=(5, 10))
     r.raise_for_status()
     data = r.json()
@@ -27,9 +26,7 @@ def _fetch_config():
         raise ValueError('config.json must contain a JSON object')
     return config, data['sha']
 
-
 def _save_config(config, sha, message):
-    """Saves config.json to GitHub via the Contents API."""
     content = json.dumps(config, ensure_ascii=False, indent=2) + "\n"
     put_data = {
         'message': message,
@@ -39,25 +36,19 @@ def _save_config(config, sha, message):
     put_r = requests.put(API_URL, headers=HEADERS, json=put_data, timeout=(5, 10))
     put_r.raise_for_status()
 
-
 def _parse_non_negative_int(value, name):
-    """Validates that the value is a non-negative integer."""
     try:
         number = int(value)
     except (TypeError, ValueError):
-        raise ValueError(f"Field '{name}' must be an integer")
+        raise ValueError(f"Поле '{name}' должно быть целым числом")
     if number < 0:
-        raise ValueError(f"Field '{name}' cannot be negative")
+        raise ValueError(f"Поле '{name}' не может быть отрицательным")
     return number
 
-
 def _update_settings(form):
-    """Validates the form, re-reads the file (fresh sha) and saves. Returns the new config."""
     create_portfolio = form.get('create_portfolio') == 'on'
     min_threshold = _parse_non_negative_int(form.get('min_threshold_rub'), 'min_threshold_rub')
     budget = _parse_non_negative_int(form.get('portfolio_creation_budget'), 'portfolio_creation_budget')
-
-    # Re-read the file: fresh sha (avoids 409) and unknown keys (e.g. 'schedule') are preserved
     config, sha = _fetch_config()
     config['create_portfolio'] = create_portfolio
     config['min_threshold_rub'] = min_threshold
@@ -65,6 +56,23 @@ def _update_settings(form):
     _save_config(config, sha, 'Update settings via Web Admin')
     return config
 
+def _update_github_secret(secret_name, secret_value):
+    key_url = f'https://api.github.com/repos/{REPO}/actions/secrets/public-key'
+    key_r = requests.get(key_url, headers=HEADERS, timeout=(5, 10))
+    key_r.raise_for_status()
+    key_data = key_r.json()
+    public_key = key_data['key']
+    key_id = key_data['key_id']
+
+    public_key_obj = public.PublicKey(public_key.encode('utf-8'), encoding.Base64Encoder())
+    sealed_box = public.SealedBox(public_key_obj)
+    encrypted_value = sealed_box.encrypt(secret_value.encode('utf-8'))
+    encrypted_value_b64 = base64.b64encode(encrypted_value).decode('utf-8')
+
+    secret_url = f'https://api.github.com/repos/{REPO}/actions/secrets/{secret_name}'
+    put_data = {'encrypted_value': encrypted_value_b64, 'key_id': key_id}
+    put_r = requests.put(secret_url, headers=HEADERS, json=put_data, timeout=(5, 10))
+    put_r.raise_for_status()
 
 def get_settings_html(request):
     msg = ""
@@ -72,12 +80,17 @@ def get_settings_html(request):
         config, _sha = _fetch_config()
     except Exception as e:
         config = dict(DEFAULTS)
-        msg = f"<p style='color:red;'>Не удалось загрузить текущие настройки: {e}. Показаны значения по умолчанию.</p>"
+        msg = f"<p style='color:red;'>Не удалось загрузить текущие настройки: {e}</p>"
 
     if request.method == 'POST':
         try:
+            if request.form.get('tinkoff_token'):
+                _update_github_secret('TINKOFF_TOKEN', request.form.get('tinkoff_token'))
+            if request.form.get('github_pat'):
+                _update_github_secret('GITHUB_PAT', request.form.get('github_pat'))
+            
             config = _update_settings(request.form)
-            msg = "<p style='color:green;'>Успех! Настройки сохранены в config.json.</p>"
+            msg = "<p style='color:green;'>Успех! Настройки и токены сохранены.</p>"
         except Exception as e:
             msg = f"<p style='color:red;'>Ошибка: {e}</p>"
 
@@ -102,6 +115,15 @@ def get_settings_html(request):
         <div style="margin-bottom: 15px;">
             <label>Бюджет создания портфеля, руб:</label>
             <input type="number" name="portfolio_creation_budget" min="0" step="1" value="{budget}" required>
+        </div>
+
+        <div style="margin-bottom: 15px; margin-top: 20px; border-top: 1px solid #ccc; padding-top: 15px;">
+            <p><b>Секретные токены (не отображаются после сохранения)</b></p>
+            <label>Токен Т-Инвестиций:</label><br>
+            <input type="password" name="tinkoff_token" placeholder="Оставьте пустым, чтобы не менять" style="width: 100%; max-width: 400px; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px;">
+            <br>
+            <label>Токен GitHub:</label><br>
+            <input type="password" name="github_pat" placeholder="Оставьте пустым, чтобы не менять" style="width: 100%; max-width: 400px; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px;">
         </div>
 
         <button type="submit" style="padding: 10px 20px; background: #27ae60; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer;">Сохранить в GitHub</button>

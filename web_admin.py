@@ -1,6 +1,7 @@
 from flask import Flask, request, redirect, url_for, render_template_string
 from pages.status import get_status_html
 from pages.schedule import get_schedule_html
+from pages.settings import get_settings_html
 
 app = Flask(__name__)
 # Логин и пароль для доступа (измените на свои)
@@ -49,6 +50,7 @@ HTML = """
         <h1>OFZ PRO</h1>
         <a href="/status" class="{{ 'active' if request.path == '/status' else '' }}">Статус</a>
         <a href="/schedule" class="{{ 'active' if request.path == '/schedule' else '' }}">Расписание</a>
+        <a href="/settings" class="{{ 'active' if request.path == '/settings' else '' }}">Настройки</a>
     </div>
     <div class="main">
         <div class="content">

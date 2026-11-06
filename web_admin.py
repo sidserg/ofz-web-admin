@@ -142,7 +142,12 @@ def index():
                 }
                 put_r = requests.put(url, headers=headers, json=put_data, timeout=10)
                 put_r.raise_for_status()
-                msg = f"<div class='msg msg-ok'>Успех! Время изменено на {h:02d}:{m:02d} МСК.</div>"
+                if mode == 'minute':
+                    msg = f"<div class='msg msg-ok'>Успех! Бот будет запускаться каждые {interval} минут.</div>"
+                elif mode == 'daily':
+                    msg = f"<div class='msg msg-ok'>Успех! Время изменено на {h:02d}:{m:02d} МСК.</div>"
+                elif mode == 'monthly':
+                    msg = f"<div class='msg msg-ok'>Успех! Бот будет запускаться каждые {month_interval} месяцев в {h:02d}:{m:02d} МСК.</div>"
             except Exception as e:
                 msg = f"<div class='msg msg-err'>Ошибка: {e}</div>"
 

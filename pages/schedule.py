@@ -10,11 +10,12 @@ REPO = 'sidserg/ofz-assistant-pro'
 def get_schedule_html(request):
     msg = ""
     current_cron = "0 17 * * *"
+    h_msk, m = 20, 0
     
     try:
         headers = {'Authorization': f'token {MY_TOKEN}', 'Accept': 'application/vnd.github.v3+json'}
         url = f'https://api.github.com/repos/{REPO}/contents/.github/workflows/bot.yml'
-        r = requests.get(url, headers=headers, timeout=10)
+        r = requests.get(url, headers=headers, timeout=(5, 10))
         r.raise_for_status()
         data = r.json()
         yml = base64.b64decode(data['content']).decode('utf-8')
@@ -26,7 +27,8 @@ def get_schedule_html(request):
             
     except Exception as e:
         msg = f"<p style='color:red;'>Не удалось загрузить текущее расписание: {e}</p>"
-    
+        return msg
+
     parts = current_cron.split()
     if len(parts) >= 2:
         try:
@@ -34,22 +36,22 @@ def get_schedule_html(request):
             h_utc = int(parts[1])
             h_msk = (h_utc + 3) % 24
         except:
-            h_msk = 20
-            m = 0
-    else:
-        h_msk = 20
-        m = 0
+            pass
 
     if request.method == 'POST':
         try:
             mode = request.form.get('selected_mode', 'daily')
             if mode == 'minute':
                 interval = int(request.form['interval_minutes'])
+                if not (1 <= interval <= 59):
+                    raise ValueError("Интервал минут должен быть от 1 до 59")
                 cron = f"*/{interval} * * * *"
                 msg_text = f"каждые {interval} минут"
             elif mode == 'daily':
                 h = int(request.form['hour'])
                 m = int(request.form['minute'])
+                if not (0 <= h <= 23 and 0 <= m <= 59):
+                    raise ValueError("Неверное время")
                 h_utc = (h - 3) % 24
                 cron = f"{m} {h_utc} * * *"
                 msg_text = f"ежедневно в {h:02d}:{m:02d} МСК"
@@ -57,19 +59,25 @@ def get_schedule_html(request):
                 month_interval = int(request.form['interval_months'])
                 h = int(request.form['hour_m'])
                 m = int(request.form['minute_m'])
+                if not (1 <= month_interval <= 12 and 0 <= h <= 23 and 0 <= m <= 59):
+                    raise ValueError("Неверные параметры месяца")
                 h_utc = (h - 3) % 24
                 cron = f"{m} {h_utc} */{month_interval} * *"
                 msg_text = f"каждые {month_interval} месяцев в {h:02d}:{m:02d} МСК"
             else:
-                raise Exception('Неизвестный режим')
+                raise ValueError('Неизвестный режим')
 
             new_yml = re.sub(r"cron: '.*?'", f"cron: '{cron}'", yml)
+            if new_yml == yml and cron not in yml:
+                 raise ValueError("Не удалось найти строку с cron в файле")
+                 
             put_data = {
                 'message': f'Update schedule: {msg_text} (Web)',
                 'content': base64.b64encode(new_yml.encode('utf-8')).decode('utf-8'),
                 'sha': sha
             }
-            requests.put(url, headers=headers, json=put_data, timeout=10).raise_for_status()
+            put_r = requests.put(url, headers=headers, json=put_data, timeout=(5, 10))
+            put_r.raise_for_status()
             msg = f"<p style='color:green;'>Успех! Бот будет запускаться {msg_text}.</p>"
             h_msk = h
             m = m

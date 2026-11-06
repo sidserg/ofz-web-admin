@@ -83,20 +83,37 @@ def index():
                 
                 html = f"""
                 <div class="card">
-                    <h2>Последний результат</h2>
+                    <h2 style="font-size: 24px; font-weight: bold; margin-bottom: 15px;">Последний результат отработки</h2>
                     <p><b>Дата:</b> {file_data.get('date', '—')}</p>
+                    <p><b>Портфель:</b> {file_data.get('portfolio', '—')}</p>
                     <p><b>Баланс:</b> {file_data.get('free_rub', 0)} руб.</p>
                     <p><b>Статус:</b> <span class="status-big">{file_data.get('status', '—')}</span></p>
                     <p><b>Действие:</b> {file_data.get('action', '—')}</p>
                 </div>
+                
                 <div class="card">
-                    <h2>Облигации</h2><ul>
+                    <h2>Облигации:</h2><ul>
                 """
                 for a in file_data.get('assets', []):
                     if a.get('type') == 'bond':
                         p = a.get('price', 0)
                         html += f"<li>{a.get('ticker')} ({a.get('name')}): {a.get('quantity')} шт x {p:.2f} руб.</li>"
                 html += "</ul></div>"
+
+                html += "<div class='card'><h2>Другие активы:</h2><ul>"
+                for a in file_data.get('assets', []):
+                    if a.get('type') != 'bond' and a.get('type') != 'currency':
+                        p = a.get('price', 0)
+                        html += f"<li>{a.get('ticker')} ({a.get('name')}): {a.get('quantity')} шт x {p:.2f} руб.</li>"
+                html += "</ul></div>"
+
+                html += "<div class='card'><h2>Денежные средства:</h2><ul>"
+                for a in file_data.get('assets', []):
+                    if a.get('type') == 'currency':
+                        p = a.get('price', 0)
+                        html += f"<li>{a.get('ticker')} ({a.get('name')}): {a.get('quantity')} шт x {p:.2f} руб.</li>"
+                html += "</ul></div>"
+                
                 content = html
         except Exception as e:
             content = f"<div class='card'><h2 style='color:red'>Ошибка: {e}</h2></div>"

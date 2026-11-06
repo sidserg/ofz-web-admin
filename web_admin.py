@@ -8,7 +8,7 @@ auth = HTTPBasicAuth()
 
 # Логин и пароль для доступа (измените на свои)
 USERS = {
-    "admin": "ofz2024"
+    "admin": "007"
 }
 
 @auth.verify_password

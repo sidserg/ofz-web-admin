@@ -91,16 +91,16 @@ def get_settings_html(request):
     {msg}
     <form method="POST">
         <div style="margin-bottom: 15px; background: #f0f8ff; padding: 10px; border-radius: 5px;">
-            <label><input type="checkbox" name="create_portfolio" {checked}> Создавать новый портфель (create_portfolio)</label>
+            <label><input type="checkbox" name="create_portfolio" {checked}> Создавать новый портфель</label>
         </div>
 
         <div style="margin-bottom: 15px;">
-            <label>Минимальный порог, руб (min_threshold_rub):</label>
+            <label>Минимальный порог, руб:</label>
             <input type="number" name="min_threshold_rub" min="0" step="1" value="{min_threshold}" required>
         </div>
 
         <div style="margin-bottom: 15px;">
-            <label>Бюджет создания портфеля, руб (portfolio_creation_budget):</label>
+            <label>Бюджет создания портфеля, руб:</label>
             <input type="number" name="portfolio_creation_budget" min="0" step="1" value="{budget}" required>
         </div>
 

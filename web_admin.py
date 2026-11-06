@@ -51,12 +51,12 @@ HTML_HEAD = """
         <h1>OFZ PRO</h1>
         <a href="/?tab=status" class="__STATUS_ACTIVE__">Статус</a>
         <a href="/?tab=schedule" class="__SCHEDULE_ACTIVE__">Расписание</a>
-    </div>
+    
     <div class="main">
 """
 
 HTML_FOOT = """
-    </div>
+    
 </body>
 </html>
 """
@@ -75,7 +75,7 @@ def index():
             files = r.json()
             
             if not files:
-                content = "<div class='card'><h2>Отчетов пока нет.</h2></div>"
+                content = "<div class='card'><h2>Отчетов пока нет.</h2>"
             else:
                 latest = sorted(files, key=lambda x: x["name"], reverse=True)[0]
                 file_r = requests.get(latest["download_url"], timeout=10)
@@ -89,7 +89,7 @@ def index():
                     <p><b>Баланс:</b> {file_data.get('free_rub', 0)} руб.</p>
                     <p><b>Статус:</b> <span class="status-big">{file_data.get('status', '—')}</span></p>
                     <p><b>Действие:</b> {file_data.get('action', '—')}</p>
-                </div>
+                
                 
                 <div class="card">
                     <h2>Облигации:</h2><ul>
@@ -98,25 +98,25 @@ def index():
                     if a.get('type') == 'bond':
                         p = a.get('price', 0)
                         html += f"<li>{a.get('ticker')} ({a.get('name')}): {a.get('quantity')} шт x {p:.2f} руб.</li>"
-                html += "</ul></div>"
+                html += "</ul>"
 
                 html += "<div class='card'><h2>Другие активы:</h2><ul>"
                 for a in file_data.get('assets', []):
                     if a.get('type') != 'bond' and a.get('type') != 'currency':
                         p = a.get('price', 0)
                         html += f"<li>{a.get('ticker')} ({a.get('name')}): {a.get('quantity')} шт x {p:.2f} руб.</li>"
-                html += "</ul></div>"
+                html += "</ul>"
 
                 html += "<div class='card'><h2>Денежные средства:</h2><ul>"
                 for a in file_data.get('assets', []):
                     if a.get('type') == 'currency':
                         p = a.get('price', 0)
                         html += f"<li>{a.get('ticker')} ({a.get('name')}): {a.get('quantity')} шт x {p:.2f} руб.</li>"
-                html += "</ul></div>"
+                html += "</ul>"
                 
                 content = html
         except Exception as e:
-            content = f"<div class='card'><h2 style='color:red'>Ошибка: {e}</h2></div>"
+            content = f"<div class='card'><h2 style='color:red'>Ошибка: {e}</h2>"
 
     elif tab == 'schedule':
         if request.method == 'POST':
@@ -160,13 +160,13 @@ def index():
                 put_r = requests.put(url, headers=headers, json=put_data, timeout=10)
                 put_r.raise_for_status()
                 if mode == 'minute':
-                    msg = f"<div class='msg msg-ok'>Успех! Бот будет запускаться каждые {interval} минут.</div>"
+                    msg = f"<div class='msg msg-ok'>Успех! Бот будет запускаться каждые {interval} минут."
                 elif mode == 'daily':
-                    msg = f"<div class='msg msg-ok'>Успех! Время изменено на {h:02d}:{m:02d} МСК.</div>"
+                    msg = f"<div class='msg msg-ok'>Успех! Время изменено на {h:02d}:{m:02d} МСК."
                 elif mode == 'monthly':
-                    msg = f"<div class='msg msg-ok'>Успех! Бот будет запускаться каждые {month_interval} месяцев в {h:02d}:{m:02d} МСК.</div>"
+                    msg = f"<div class='msg msg-ok'>Успех! Бот будет запускаться каждые {month_interval} месяцев в {h:02d}:{m:02d} МСК."
             except Exception as e:
-                msg = f"<div class='msg msg-err'>Ошибка: {e}</div>"
+                msg = f"<div class='msg msg-err'>Ошибка: {e}"
 
         content = """
         <div class="card">
@@ -178,22 +178,22 @@ def index():
                 <div style="margin-bottom: 15px;">
                     <label><input type="radio" name="type" value="minute" > Каждые 
                     <input type="number" name="interval_minutes" value="15" style="width: 60px;"> минут(ы)</label>
-                </div>
+                
                 <div style="margin-bottom: 15px; background: #f0f8ff; padding: 10px; border-radius: 5px;">
                     <label><input type="radio" name="type" value="daily" checked> Каждый день в</label>
                     <input type="number" name="hour" min="0" max="23" value="20" required style="width: 60px; margin-left: 10px;"> :
                     <input type="number" name="minute" min="0" max="59" value="0" required style="width: 60px;">
-                </div>
+                
                 <div style="margin-bottom: 15px;">
                     <label><input type="radio" name="type" value="monthly"> Каждые 
                     <input type="number" name="interval_months" value="1" style="width: 50px;"> месяца в</label>
                     <input type="number" name="hour_m" value="19" style="width: 60px; margin-left: 10px;"> :
                     <input type="number" name="minute_m" value="0" style="width: 60px;">
-                </div>
+                
                 <button type="submit" style="background: #27ae60; color: white; padding: 10px 20px; border: none; border-radius: 4px; font-size: 16px; cursor: pointer;">Сохранить</button>
             </form>
             
-        </div>
+        
         """
 
     final_html = HTML_HEAD.replace('__STATUS_ACTIVE__', 'active' if tab == 'status' else '')

@@ -4,12 +4,31 @@ from pages.schedule import get_schedule_html
 from pages.settings import get_settings_html
 
 app = Flask(__name__)
-# Логин и пароль для доступа (измените на свои)
 
-
-
-
-app = Flask(__name__)
+HTML_LOGIN = """
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Вход - OFZ PRO</title>
+    <style>
+        body { font-family: Arial; background: #2c3e50; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .box { background: white; padding: 40px; border-radius: 8px; text-align: center; }
+        input { padding: 10px; font-size: 18px; margin-bottom: 20px; width: 200px; text-align: center; }
+        button { padding: 10px 30px; font-size: 18px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h2>Введите пароль</h2>
+        <form method="POST">
+            <input type="password" name="password" placeholder="Пароль" required><br>
+            <button type="submit">Войти</button>
+        </form>
+    </div>
+</body>
+</html>
+"""
 
 HTML = """
 <!DOCTYPE html>
@@ -31,11 +50,8 @@ HTML = """
         p { margin: 3px 0; font-size: 15px; color: #000; }
         ul { list-style: none; padding: 0; margin: 0; }
         li { padding: 2px 0; font-size: 15px; color: #000; }
-        input[type="number"] { padding: 8px; font-size: 16px; width: 70px; border: 1px solid #ccc; border-radius: 4px; margin: 0 5px; }
-        button { padding: 10px 20px; font-size: 16px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 15px; }
-        label { display: inline-block; margin-bottom: 10px; font-size: 16px; }
-        .schedule-row { margin-bottom: 15px; padding: 10px; border-radius: 5px; }
-        .schedule-row.active { background: #f0f8ff; }
+        input[type="number"] { padding: 5px; font-size: 14px; width: 60px; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 10px 20px; font-size: 16px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 10px; }
         @media (max-width: 600px) {
             body { flex-direction: column; }
             .sidebar { width: 100%; flex-direction: row; overflow-x: auto; }
@@ -61,12 +77,30 @@ HTML = """
 </html>
 """
 
+def check_auth():
+    return request.cookies.get('auth_token') == 'secret_007'
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        if request.form.get('password') == '007':
+            resp = redirect(url_for('index'))
+            resp.set_cookie('auth_token', 'secret_007', max_age=86400*30)
+            return resp
+        else:
+            return HTML_LOGIN.replace('</h2>', '</h2><p style="color:red">Неверный пароль</p>')
+    return HTML_LOGIN
+
 @app.route('/')
 def index():
+    if not check_auth():
+        return redirect(url_for('login'))
     return redirect(url_for('status_page'))
 
 @app.route('/status')
 def status_page():
+    if not check_auth():
+        return redirect(url_for('login'))
     try:
         content = get_status_html()
     except Exception as e:
@@ -75,6 +109,8 @@ def status_page():
 
 @app.route('/schedule', methods=['GET', 'POST'])
 def schedule_page():
+    if not check_auth():
+        return redirect(url_for('login'))
     try:
         content = get_schedule_html(request)
     except Exception as e:

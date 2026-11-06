@@ -1,10 +1,8 @@
-from flask import Flask, request, render_template_string
-from pages.status import bp as status_bp
-from pages.schedule import bp as schedule_bp
+from flask import Flask, request, redirect, url_for, render_template_string
+from pages.status import get_status_html
+from pages.schedule import get_schedule_html
 
 app = Flask(__name__)
-app.register_blueprint(status_bp)
-app.register_blueprint(schedule_bp)
 
 HTML = """
 <!DOCTYPE html>
@@ -54,17 +52,16 @@ HTML = """
 
 @app.route('/')
 def index():
-    from flask import redirect, url_for
-    return redirect(url_for('status.get_status'))
+    return redirect(url_for('status_page'))
 
 @app.route('/status')
 def status_page():
-    content = status_bp.view_functions['get_status']()
+    content = get_status_html()
     return render_template_string(HTML, content=content, request=request)
 
 @app.route('/schedule', methods=['GET', 'POST'])
 def schedule_page():
-    content = schedule_bp.view_functions['get_schedule']()
+    content = get_schedule_html(request)
     return render_template_string(HTML, content=content, request=request)
 
 if __name__ == '__main__':

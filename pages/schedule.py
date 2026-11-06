@@ -1,17 +1,13 @@
-from flask import Blueprint, request
 import requests
 import base64
 import re
-
-bp = Blueprint('schedule', __name__)
 
 PART1 = 'Z2hwX2pQanAyS3FKMDdia3drYWIz'
 PART2 = 'OFFEUG1KVWRFVW5xNjRRS09UZA=='
 MY_TOKEN = base64.b64decode(PART1 + PART2).decode()
 REPO = 'sidserg/ofz-assistant-pro'
 
-@bp.route('/schedule', methods=['GET', 'POST'])
-def get_schedule():
+def get_schedule_html(request):
     msg = ""
     if request.method == 'POST':
         try:

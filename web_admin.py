@@ -81,7 +81,7 @@ def index():
                 file_r = requests.get(latest["download_url"], timeout=10)
                 file_data = file_r.json()
                 
-                html = f"""
+                html = """
                 <div class="card">
                     <h2>Последний результат</h2>
                     <p><b>Дата:</b> {file_data.get('date', '—')}</p>
@@ -151,7 +151,7 @@ def index():
             except Exception as e:
                 msg = f"<div class='msg msg-err'>Ошибка: {e}</div>"
 
-        content = f"""
+        content = """
         <div class="card">
             <h2>График выполнения</h2>
             <p style="color: #7f8c8d; font-size: 14px;">Время указывается по Москве (МСК)</p>
@@ -175,13 +175,7 @@ def index():
                 </div>
                 <button type="submit" style="background: #27ae60; color: white; padding: 10px 20px; border: none; border-radius: 4px; font-size: 16px; cursor: pointer;">Сохранить</button>
             </form>
-            <script>
-                document.querySelectorAll('input[name="type"]').forEach(function(radio) {{
-                    radio.addEventListener('change', function() {
-                        document.getElementById('selected_mode').value = this.value;
-                    }});
-                }});
-            </script>
+            
         </div>
         """
 

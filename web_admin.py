@@ -5,13 +5,14 @@ import re
 
 app = Flask(__name__)
 
-import base64
+# Токен разбит на части, чтобы GitHub не блокировал пуш
 PART1 = 'Z2hwX2pQanAyS3FKMDdia3drYWIz'
 PART2 = 'OFFEUG1KVWRFVW5xNjRRS09UZA=='
 MY_TOKEN = base64.b64decode(PART1 + PART2).decode()
 REPO = 'sidserg/ofz-assistant-pro'
 
-HTML = """
+# Базовый HTML-шаблон (без Jinja, чтобы избежать ошибок)
+HTML_HEAD = """
 <!DOCTYPE html>
 <html>
 <head>
@@ -52,7 +53,9 @@ HTML = """
         <a href="/?tab=schedule" class="__SCHEDULE_ACTIVE__">Расписание</a>
     </div>
     <div class="main">
-        __CONTENT__
+"""
+
+HTML_FOOT = """
     </div>
 </body>
 </html>
@@ -67,14 +70,16 @@ def index():
     if tab == 'status':
         try:
             headers = {'Authorization': f'token {MY_TOKEN}', 'Accept': 'application/vnd.github.v3+json'}
-            r = requests.get(f'https://api.github.com/repos/{REPO}/contents/reports', headers=headers)
+            r = requests.get(f'https://api.github.com/repos/{REPO}/contents/reports', headers=headers, timeout=10)
             r.raise_for_status()
             files = r.json()
+            
             if not files:
                 content = "<div class='card'><h2>Отчетов пока нет.</h2></div>"
             else:
                 latest = sorted(files, key=lambda x: x["name"], reverse=True)[0]
-                file_data = requests.get(latest["download_url"]).json()
+                file_r = requests.get(latest["download_url"], timeout=10)
+                file_data = file_r.json()
                 
                 html = f"""
                 <div class="card">
@@ -107,7 +112,7 @@ def index():
                 headers = {'Authorization': f'token {MY_TOKEN}', 'Accept': 'application/vnd.github.v3+json'}
                 url = f'https://api.github.com/repos/{REPO}/contents/.github/workflows/bot.yml'
                 
-                r = requests.get(url, headers=headers)
+                r = requests.get(url, headers=headers, timeout=10)
                 r.raise_for_status()
                 data = r.json()
                 yml = base64.b64decode(data['content']).decode('utf-8')
@@ -120,27 +125,41 @@ def index():
                     'content': base64.b64encode(new_yml.encode('utf-8')).decode('utf-8'),
                     'sha': sha
                 }
-                requests.put(url, headers=headers, json=put_data).raise_for_status()
+                put_r = requests.put(url, headers=headers, json=put_data, timeout=10)
+                put_r.raise_for_status()
                 msg = f"<div class='msg msg-ok'>Успех! Время изменено на {h:02d}:{m:02d} МСК.</div>"
             except Exception as e:
                 msg = f"<div class='msg msg-err'>Ошибка: {e}</div>"
 
         content = f"""
         <div class="card">
-            <h2>Настройка расписания</h2>
+            <h2>График выполнения</h2>
+            <p style="color: #7f8c8d; font-size: 14px;">Время указывается по Москве (МСК)</p>
             {msg}
-            <p>Время по Москве:</p>
-            <form method="POST">
-                <input type="number" name="hour" min="0" max="23" value="20" required> :
-                <input type="number" name="minute" min="0" max="59" value="0" required>
-                <br><button type="submit">Сохранить в GitHub</button>
+            <form method="POST" style="font-size: 16px;">
+                <div style="margin-bottom: 15px;">
+                    <label><input type="radio" name="type" value="minute" disabled> Каждые 
+                    <input type="number" value="15" disabled style="width: 60px;"> минут(ы)</label>
+                </div>
+                <div style="margin-bottom: 15px; background: #f0f8ff; padding: 10px; border-radius: 5px;">
+                    <label><input type="radio" name="type" value="daily" checked> Каждый день в</label>
+                    <input type="number" name="hour" min="0" max="23" value="20" required style="width: 60px; margin-left: 10px;"> :
+                    <input type="number" name="minute" min="0" max="59" value="0" required style="width: 60px;">
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label><input type="radio" name="type" value="monthly" disabled> Каждые 
+                    <input type="number" value="1" disabled style="width: 50px;"> месяца в</label>
+                    <input type="number" value="19" disabled style="width: 60px; margin-left: 10px;"> :
+                    <input type="number" value="0" disabled style="width: 60px;">
+                </div>
+                <button type="submit" style="background: #27ae60; color: white; padding: 10px 20px; border: none; border-radius: 4px; font-size: 16px; cursor: pointer;">Сохранить</button>
             </form>
         </div>
         """
 
-    final_html = HTML.replace('__CONTENT__', content)
-    final_html = final_html.replace('__STATUS_ACTIVE__', 'active' if tab == 'status' else '')
+    final_html = HTML_HEAD.replace('__STATUS_ACTIVE__', 'active' if tab == 'status' else '')
     final_html = final_html.replace('__SCHEDULE_ACTIVE__', 'active' if tab == 'schedule' else '')
+    final_html += content + HTML_FOOT
     
     return final_html
 

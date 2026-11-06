@@ -104,7 +104,7 @@ def index():
     elif tab == 'schedule':
         if request.method == 'POST':
             try:
-                mode = request.form.get('type', 'daily')
+                mode = request.form.get('selected_mode', 'daily')
                 
                 if mode == 'minute':
                     interval = int(request.form['interval_minutes'])
@@ -157,8 +157,9 @@ def index():
             <p style="color: #7f8c8d; font-size: 14px;">Время указывается по Москве (МСК)</p>
             {msg}
             <form method="POST" style="font-size: 16px;">
+                <input type="hidden" name="selected_mode" id="selected_mode" value="daily">
                 <div style="margin-bottom: 15px;">
-                    <label><input type="radio" name="type" value="minute" onclick="this.form.submit()"> Каждые 
+                    <label><input type="radio" name="type" value="minute" > Каждые 
                     <input type="number" name="interval_minutes" value="15" style="width: 60px;"> минут(ы)</label>
                 </div>
                 <div style="margin-bottom: 15px; background: #f0f8ff; padding: 10px; border-radius: 5px;">
@@ -174,6 +175,13 @@ def index():
                 </div>
                 <button type="submit" style="background: #27ae60; color: white; padding: 10px 20px; border: none; border-radius: 4px; font-size: 16px; cursor: pointer;">Сохранить</button>
             </form>
+            <script>
+                document.querySelectorAll('input[name="type"]').forEach(function(radio) {
+                    radio.addEventListener('change', function() {
+                        document.getElementById('selected_mode').value = this.value;
+                    });
+                });
+            </script>
         </div>
         """
 

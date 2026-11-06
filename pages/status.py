@@ -19,31 +19,31 @@ def get_status_html():
         file_data = requests.get(latest["download_url"], timeout=10).json()
         
         html = f"<h2>Последний результат отработки</h2>"
-        html += f"<p><b>Дата:</b> {file_data.get('date', '—')}</p>"
-        html += f"<p><b>Портфель:</b> {file_data.get('portfolio', '—')}</p>"
-        html += f"<p><b>Баланс:</b> {file_data.get('free_rub', 0)} руб.</p>"
-        html += f"<p><b>Статус:</b> {file_data.get('status', '—')}</p>"
-        html += f"<p><b>Действие:</b> {file_data.get('action', '—')}</p>"
+        html += f"<p><b>Дата:</b> {str(file_data.get('date', '—'))}</p>"
+        html += f"<p><b>Портфель:</b> {str(file_data.get('portfolio', '—'))}</p>"
+        html += f"<p><b>Баланс:</b> {float(file_data.get('free_rub', 0)):.2f} руб.</p>"
+        html += f"<p><b>Статус:</b> {str(file_data.get('status', '—'))}</p>"
+        html += f"<p><b>Действие:</b> {str(file_data.get('action', '—'))}</p>"
         
         html += "<h2>Облигации:</h2><ul>"
         for a in file_data.get('assets', []):
             if a.get('type') == 'bond':
-                p = a.get('price', 0)
-                html += f"<li>• {a.get('ticker')} ({a.get('name')}): {a.get('quantity')} шт x {p:.2f} руб.</li>"
+                p = float(a.get('price', 0))
+                html += f"<li>• {str(a.get('ticker', '?'))} ({str(a.get('name', '?'))}): {float(a.get('quantity', 0))} шт x {p:.2f} руб.</li>"
         html += "</ul>"
         
         html += "<h2>Другие активы:</h2><ul>"
         for a in file_data.get('assets', []):
             if a.get('type') != 'bond' and a.get('type') != 'currency':
-                p = a.get('price', 0)
-                html += f"<li>• {a.get('ticker')} ({a.get('name')}): {a.get('quantity')} шт x {p:.2f} руб.</li>"
+                p = float(a.get('price', 0))
+                html += f"<li>• {str(a.get('ticker', '?'))} ({str(a.get('name', '?'))}): {float(a.get('quantity', 0))} шт x {p:.2f} руб.</li>"
         html += "</ul>"
         
         html += "<h2>Денежные средства:</h2><ul>"
         for a in file_data.get('assets', []):
             if a.get('type') == 'currency':
-                p = a.get('price', 0)
-                html += f"<li>• {a.get('ticker')} ({a.get('name')}): {a.get('quantity')} шт x {p:.2f} руб.</li>"
+                p = float(a.get('price', 0))
+                html += f"<li>• {str(a.get('ticker', '?'))} ({str(a.get('name', '?'))}): {float(a.get('quantity', 0))} шт x {p:.2f} руб.</li>"
         html += "</ul>"
         return html
     except Exception as e:

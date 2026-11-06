@@ -9,6 +9,37 @@ REPO = 'sidserg/ofz-assistant-pro'
 
 def get_schedule_html(request):
     msg = ""
+    current_cron = "0 17 * * *"
+    
+    try:
+        headers = {'Authorization': f'token {MY_TOKEN}', 'Accept': 'application/vnd.github.v3+json'}
+        url = f'https://api.github.com/repos/{REPO}/contents/.github/workflows/bot.yml'
+        r = requests.get(url, headers=headers, timeout=10)
+        r.raise_for_status()
+        data = r.json()
+        yml = base64.b64decode(data['content']).decode('utf-8')
+        sha = data['sha']
+        
+        match = re.search(r"cron: '(.*?)'", yml)
+        if match:
+            current_cron = match.group(1)
+            
+    except Exception as e:
+        msg = f"<p style='color:red;'>Не удалось загрузить текущее расписание: {e}</p>"
+    
+    parts = current_cron.split()
+    if len(parts) >= 2:
+        try:
+            m = int(parts[0])
+            h_utc = int(parts[1])
+            h_msk = (h_utc + 3) % 24
+        except:
+            h_msk = 20
+            m = 0
+    else:
+        h_msk = 20
+        m = 0
+
     if request.method == 'POST':
         try:
             mode = request.form.get('selected_mode', 'daily')
@@ -32,13 +63,6 @@ def get_schedule_html(request):
             else:
                 raise Exception('Неизвестный режим')
 
-            headers = {'Authorization': f'token {MY_TOKEN}', 'Accept': 'application/vnd.github.v3+json'}
-            url = f'https://api.github.com/repos/{REPO}/contents/.github/workflows/bot.yml'
-            r = requests.get(url, headers=headers, timeout=10)
-            r.raise_for_status()
-            data = r.json()
-            yml = base64.b64decode(data['content']).decode('utf-8')
-            sha = data['sha']
             new_yml = re.sub(r"cron: '.*?'", f"cron: '{cron}'", yml)
             put_data = {
                 'message': f'Update schedule: {msg_text} (Web)',
@@ -47,6 +71,8 @@ def get_schedule_html(request):
             }
             requests.put(url, headers=headers, json=put_data, timeout=10).raise_for_status()
             msg = f"<p style='color:green;'>Успех! Бот будет запускаться {msg_text}.</p>"
+            h_msk = h
+            m = m
         except Exception as e:
             msg = f"<p style='color:red;'>Ошибка: {e}</p>"
 
@@ -64,8 +90,8 @@ def get_schedule_html(request):
         
         <div style="margin-bottom: 15px; background: #f0f8ff; padding: 10px; border-radius: 5px;">
             <label><input type="radio" name="type" value="daily" checked onchange="document.getElementById('selected_mode').value=this.value"> Каждый день в</label>
-            <input type="number" name="hour" min="0" max="23" value="20" required> :
-            <input type="number" name="minute" min="0" max="59" value="0" required>
+            <input type="number" name="hour" min="0" max="23" value="{h_msk}" required> :
+            <input type="number" name="minute" min="0" max="59" value="{m}" required>
         </div>
         
         <div style="margin-bottom: 15px;">

@@ -52,11 +52,13 @@ HTML_HEAD = """
         <a href="/?tab=status" class="__STATUS_ACTIVE__">Статус</a>
         <a href="/?tab=schedule" class="__SCHEDULE_ACTIVE__">Расписание</a>
     
+    </div>
     <div class="main">
 """
 
 HTML_FOOT = """
     
+    </div>
 </body>
 </html>
 """

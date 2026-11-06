@@ -83,7 +83,7 @@ def index():
                 
                 html = f"""
                 <div class="card">
-                    <h2 style="font-size: 24px; font-weight: bold; margin-bottom: 15px;">Последний результат отработки</h2>
+                    <h2 style="font-size: 18px; font-weight: bold; margin-bottom: 5px;">Последний результат отработки</h2>
                     <p><b>Дата:</b> {file_data.get('date', '—')}</p>
                     <p><b>Портфель:</b> {file_data.get('portfolio', '—')}</p>
                     <p><b>Баланс:</b> {file_data.get('free_rub', 0)} руб.</p>

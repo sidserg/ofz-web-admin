@@ -83,7 +83,7 @@ def get_schedule_html(request):
             msg = f"<p style='color:red;'>Ошибка: {e}</p>"
 
     return f"""
-    <h2>График выполнения</h2>
+    <h2 style="margin-bottom: 20px;">График выполнения</h2>
     <p>Время указывается по Москве (МСК)</p>
     {msg}
     <form method="POST">

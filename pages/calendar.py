@@ -1,157 +1,151 @@
+"""Модуль календаря на весь год для Flask-веб-интерфейса."""
+import calendar as cal_module
 import base64
-import calendar
-import html
-from datetime import date, datetime
-
 import requests
+from datetime import date
+import html
 
-PART1 = 'Z2hwX2pQanAyS3FKMDdia3drYWIz'
-PART2 = 'OFFEUG1KVWRFVW5xNjRRS09UZA=='
-MY_TOKEN = base64.b64decode(PART1 + PART2).decode()
-REPO = 'sidserg/ofz-assistant-pro'
-API_URL = f'https://api.github.com/repos/{REPO}/contents/reports'
-HEADERS = {'Authorization': f'token {MY_TOKEN}', 'Accept': 'application/vnd.github.v3+json'}
+MONTH_NAMES = [
+    "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
+    "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь",
+]
+WEEK_DAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
 
-WEEKDAYS = ('Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс')
-MONTHS = ('Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-          'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь')
+GITHUB_REPO = "sidserg/ofz-assistant-pro"
+GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}"
 
-
-def _to_float(value):
-    """Converts a value from report JSON to float; returns 0.0 for None/garbage."""
+def _get_github_files(pat: str, path: str) -> list[dict]:
+    if not pat:
+        return []
+    headers = {
+        "Authorization": f"token {pat}",
+        "Accept": "application/vnd.github.v3+json",
+    }
+    url = f"{GITHUB_API_URL}/contents/{path}"
     try:
-        return float(value)
-    except (TypeError, ValueError):
-        return 0.0
+        resp = requests.get(url, headers=headers, timeout=(5, 10))
+        if resp.status_code != 200:
+            return []
+        return resp.json()
+    except requests.RequestException:
+        return []
 
-
-def _fetch_reports_by_day():
-    """Lists reports/ and returns {YYYY-MM-DD: {'name': ..., 'download_url': ...}} (latest file per day)."""
-    r = requests.get(API_URL, headers=HEADERS, timeout=(5, 10))
-    r.raise_for_status()
-    items = r.json()
-    by_day = {}
-    if not isinstance(items, list):
-        return by_day
-    for item in items:
-        name = item.get('name', '')
-        if item.get('type') != 'file' or not name.endswith('.json'):
-            continue
-        day = name[:10]
-        try:
-            datetime.strptime(day, '%Y-%m-%d')
-        except ValueError:
-            continue
-        # File names start with a sortable timestamp, so the lexicographically
-        # greatest name of a day is its latest report.
-        if day not in by_day or name > by_day[day]['name']:
-            by_day[day] = {'name': name, 'download_url': item.get('download_url')}
-    return by_day
-
-
-def _fetch_report_details(download_url):
-    """Downloads one report JSON. Returns dict or None."""
-    if not download_url:
-        return None
-    r = requests.get(download_url, timeout=(5, 10))
-    r.raise_for_status()
-    data = r.json()
-    return data if isinstance(data, dict) else None
-
-
-def _render_details(day, report):
-    """Renders the details block for one day."""
-    if report is None:
-        return "<p style='color:red;'>Не удалось загрузить файл отчёта.</p>"
-
-    esc = lambda v: html.escape(str(v if v is not None else '—'), quote=True)
-    html_out = "<h2>Отчёт за {0}</h2>".format(esc(day))
-    html_out += "<p><b>Дата:</b> {0}</p>".format(esc(report.get('date', '—')))
-    html_out += "<p><b>Портфель:</b> {0}</p>".format(esc(report.get('portfolio', '—')))
-    html_out += "<p><b>Баланс:</b> {0:.2f} руб.</p>".format(_to_float(report.get('free_rub')))
-    html_out += "<p><b>Статус:</b> {0}</p>".format(esc(report.get('status', '—')))
-    html_out += "<p><b>Действие:</b> {0}</p>".format(esc(report.get('action', '—')))
-
-    assets = report.get('assets')
-    bonds = [a for a in assets if isinstance(a, dict) and a.get('type') == 'bond'] if isinstance(assets, list) else []
-    html_out += "<h2>Облигации</h2>"
-    if not bonds:
-        html_out += "<p>Нет облигаций в отчёте.</p>"
-    else:
-        html_out += "<ul>"
-        for a in bonds:
-            html_out += "<li>• {0} ({1}): {2} шт x {3:.2f} руб.</li>".format(
-                esc(a.get('ticker', '?')), esc(a.get('name', '?')),
-                _to_float(a.get('quantity')), _to_float(a.get('price')))
-        html_out += "</ul>"
-    html_out += "<p><a href='/calendar'>&larr; Назад к календарю</a></p>"
-    return html_out
-
-
-def _render_calendar(by_day, today):
-    """Renders the month grid; days with reports are green links, others are plain cells."""
-    weeks = calendar.Calendar(firstweekday=0).monthdayscalendar(today.year, today.month)
-
-    html_out = "<h2>Календарь: {0} {1}</h2>".format(MONTHS[today.month - 1], today.year)
-    html_out += (
-        "<table style='border-collapse: collapse; width: 100%; max-width: 560px; table-layout: fixed;'>"
-        "<tr>"
-    )
-    for wd in WEEKDAYS:
-        html_out += "<th style='border: 1px solid #ccc; padding: 6px; background: #f0f0f0;'>{0}</th>".format(wd)
-    html_out += "</tr>"
-    for week in weeks:
-        html_out += "<tr>"
-        for day_num in week:
-            if day_num == 0:
-                html_out += "<td style='border: 1px solid #ccc; height: 44px;'>&nbsp;</td>"
-                continue
-            day_str = "{0:04d}-{1:02d}-{2:02d}".format(today.year, today.month, day_num)
-            report = by_day.get(day_str)
-            style = "border: 1px solid #ccc; text-align: center; vertical-align: middle; height: 44px;"
-            if day_num == today.day:
-                style += " font-weight: bold; outline: 2px solid #2980b9; outline-offset: -2px;"
-            if report:
-                html_out += (
-                    "<td style='{0} background: #d4edda;'>".format(style)
-                    + "<a href='/calendar?day={0}' title='{1}' style='color: #155724; text-decoration: none;'>".format(day_str, html.escape(report["name"], quote=True))
-                    + "&#10003; {0}".format(day_num)
-                    + "</a></td>"
-                )
-            else:
-                html_out += "<td style='{0}'>{1}</td>".format(style, day_num)
-        html_out += "</tr>"
-    html_out += "</table>"
-    html_out += "<p style='color:#777; font-size: 13px;'>Зелёным отмечены дни, за которые есть отчёт. Нажмите на день, чтобы посмотреть детали.</p>"
-    return html_out
-
-
-def get_calendar_html(request):
-    today = date.today()
-    msg = ""
-    by_day = {}
-    try:
-        by_day = _fetch_reports_by_day()
-    except Exception as e:
-        msg = f"<p style='color:red;'>Не удалось получить список отчётов: {e}</p>"
-
-    day = request.args.get('day', '')
-    if day:
-        # Reject anything that is not a plain YYYY-MM-DD string before using it
-        try:
-            datetime.strptime(day, '%Y-%m-%d')
-        except ValueError:
-            day = ''
-    if day:
-        if day not in by_day:
-            content = f"<p style='color:red;'>Отчёта за {html.escape(day, quote=True)} нет.</p>"
-        else:
+def _get_report_dates(pat: str, year: int) -> set:
+    dates = set()
+    files = _get_github_files(pat, "reports")
+    for f in files:
+        name = f.get("name", "")
+        if len(name) >= 10 and name[:4] == str(year):
+            date_str = name[:10]
             try:
-                report = _fetch_report_details(by_day[day]['download_url'])
-                content = _render_details(day, report)
-            except Exception as e:
-                content = f"<p style='color:red;'>Ошибка загрузки отчёта: {e}</p>"
-    else:
-        content = _render_calendar(by_day, today)
+                date.fromisoformat(date_str)
+                dates.add(date_str)
+            except ValueError:
+                pass
+    return dates
 
-    return msg + content
+def _load_report_from_github(pat: str, date_str: str) -> dict | None:
+    files = _get_github_files(pat, "reports")
+    for f in files:
+        name = f.get("name", "")
+        if name.startswith(date_str + "_"):
+            download_url = f.get("download_url")
+            if download_url:
+                try:
+                    resp = requests.get(download_url, timeout=(5, 10))
+                    if resp.status_code == 200:
+                        return resp.json()
+                except requests.RequestException:
+                    pass
+    return None
+
+def _render_month(year: int, month: int, report_dates: set) -> str:
+    first_weekday, days_in_month = cal_module.monthrange(year, month)
+    offset = first_weekday
+
+    html_out = '<div style="border: 1px solid #ccc; padding: 10px; border-radius: 5px; margin-bottom: 10px; background: white;">'
+    html_out += f'<div style="text-align: center; font-weight: bold; margin-bottom: 5px; color: #2c3e50;">{MONTH_NAMES[month - 1]}</div>'
+    html_out += '<table style="width: 100%; border-collapse: collapse; text-align: center; font-size: 14px;">'
+    html_out += '<tr style="color: #7f8c8d; font-size: 12px;">'
+    for wd in WEEK_DAYS:
+        html_out += f"<th style='padding: 2px;'>{wd}</th>"
+    html_out += "</tr><tr>"
+
+    cell = 0
+    for _ in range(offset):
+        html_out += "<td></td>"
+        cell += 1
+
+    for day in range(1, days_in_month + 1):
+        date_str = f"{year}-{month:02d}-{day:02d}"
+        if date_str in report_dates:
+            html_out += f'<td style="padding: 2px;"><a href="/calendar?day={date_str}" style="color: white; background: #27ae60; display: block; text-decoration: none; border-radius: 3px;">{day}</a></td>'
+        else:
+            html_out += f'<td style="padding: 2px; color: #000;">{day}</td>'
+        cell += 1
+        if cell % 7 == 0 and day != days_in_month:
+            html_out += "</tr><tr>"
+
+    while cell % 7 != 0:
+        html_out += "<td></td>"
+        cell += 1
+
+    html_out += "</tr></table></div>"
+    return html_out
+
+def _render_report_detail(date_str: str, pat: str) -> str:
+    data = _load_report_from_github(pat, date_str)
+    if data is None:
+        return f"<div style='color:red;'>Отчёт за {date_str} не найден.</div>"
+
+    bonds = [a for a in data.get("assets", []) if a.get("type") == "bond"]
+
+    html_out = f'<div style="background: #f4f6f9; padding: 15px; border-radius: 5px; margin-bottom: 20px;">'
+    html_out += f'<a href="/calendar" style="color: #3498db; text-decoration: none;">&larr; Назад к календарю</a>'
+    html_out += f"<h2 style='margin-top: 10px;'>Отчёт за {date_str}</h2>"
+    html_out += f"<p><b>Портфель:</b> {html.escape(str(data.get('portfolio', '—')))}</p>"
+    html_out += f"<p><b>Баланс:</b> {float(data.get('free_rub', 0)):.2f} руб.</p>"
+    html_out += f"<p><b>Статус:</b> {html.escape(str(data.get('status', '—')))}</p>"
+    html_out += "<h3>Облигации</h3><ul style='list-style: none; padding: 0;'>"
+    for b in bonds:
+        price = float(b.get('price', 0))
+        html_out += f"<li style='padding: 2px 0;'>{html.escape(str(b.get('ticker')))} ({html.escape(str(b.get('name')))}): {float(b.get('quantity', 0))} шт x {price:.2f} руб.</li>"
+    if not bonds:
+        html_out += "<li>Нет облигаций</li>"
+    html_out += "</ul></div>"
+    return html_out
+
+def _render_year_nav(year: int) -> str:
+    return f'''
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: white; padding: 10px; border-radius: 5px;">
+        <a href="/calendar?year={year - 1}" style="text-decoration: none; color: #3498db; font-weight: bold;">&laquo; {year - 1}</a>
+        <span style="font-size: 20px; font-weight: bold; color: #2c3e50;">{year}</span>
+        <a href="/calendar?year={year + 1}" style="text-decoration: none; color: #3498db; font-weight: bold;">{year + 1} &raquo;</a>
+    </div>
+    '''
+
+def get_calendar_html(request, pat: str) -> str:
+    year_str = request.args.get("year", "")
+    day_str = request.args.get("day", "")
+
+    if year_str.isdigit():
+        year = int(year_str)
+    elif day_str and len(day_str) >= 4 and day_str[:4].isdigit():
+        year = int(day_str[:4])
+    else:
+        year = date.today().year
+
+    report_dates = _get_report_dates(pat, year)
+
+    html_out = "<h2>Календарь отчётов</h2>"
+    html_out += _render_year_nav(year)
+
+    if day_str:
+        html_out += _render_report_detail(day_str, pat)
+
+    html_out += '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px;">'
+    for month in range(1, 13):
+        html_out += _render_month(year, month, report_dates)
+    html_out += "</div>"
+
+    return html_out

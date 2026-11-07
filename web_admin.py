@@ -40,17 +40,17 @@ HTML = """
     <title>OFZ PRO</title>
     <style>
         * { box-sizing: border-box; }
-        body { margin: 0; font-family: Arial, sans-serif; background: #f4f6f9; display: flex; height: 100vh; overflow: hidden; }
+        body { margin: 0; font-family: Arial, sans-serif; background: #f4f6f9; display: flex; height: 100vh; overflow: hidden; font-weight: 500; }
         .sidebar { width: 200px; background: #2c3e50; color: white; display: flex; flex-direction: column; flex-shrink: 0; }
         .sidebar h1 { font-size: 18px; text-align: center; padding: 20px 0; background: #1a252f; margin: 0; color: #1abc9c; }
-        .sidebar a { padding: 15px; text-decoration: none; color: #bdc3c7; border-left: 4px solid transparent; }
+        .sidebar a { padding: 15px; text-decoration: none; color: #bdc3c7; border-left: 4px solid transparent; font-weight: 600; }
         .sidebar a:hover, .sidebar a.active { background: #34495e; color: white; border-left-color: #1abc9c; }
         .main { flex-grow: 1; padding: 20px; overflow-y: auto; background: #f4f6f9; }
         .content { background: white; padding: 20px; border-radius: 5px; }
-        h2 { font-size: 18px; font-weight: bold; margin: 15px 0 5px 0; color: #000; }
-        p { margin: 3px 0; font-size: 15px; color: #000; }
+        h2 { font-size: 18px; font-weight: 900; margin: 15px 0 5px 0; color: #000; }
+        p { margin: 3px 0; font-size: 15px; color: #000; font-weight: 600; }
         ul { list-style: none; padding: 0; margin: 0; }
-        li { padding: 2px 0; font-size: 15px; color: #000; }
+        li { padding: 2px 0; font-size: 15px; color: #000; font-weight: 600; }
         input[type="number"] { padding: 5px; font-size: 14px; width: 60px; border: 1px solid #ccc; border-radius: 4px; }
         button { padding: 10px 20px; font-size: 16px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 10px; }
         @media (max-width: 600px) {

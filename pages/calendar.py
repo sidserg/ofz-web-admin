@@ -104,13 +104,13 @@ def _render_month(year: int, month: int, report_dates: set) -> str:
 def _render_report_detail(date_str: str, pat: str) -> str:
     data = _load_report_from_github(pat, date_str)
     if data is None:
-        return f"<div style='color:red;'>Отчёт за {date_str} не найден.</div>"
+        return f"<div style='color:red;'>Отчёт за {html.escape(date_str)} не найден.</div>"
 
     bonds = [a for a in data.get("assets", []) if a.get("type") == "bond"]
 
     html_out = f'<div style="background: #f4f6f9; padding: 15px; border-radius: 5px; margin-bottom: 20px;">'
     html_out += f'<a href="/calendar" style="color: #3498db; text-decoration: none;">&larr; Назад к календарю</a>'
-    html_out += f"<h2 style='margin-top: 10px;'>Отчёт за {date_str}</h2>"
+    html_out += f"<h2 style='margin-top: 10px;'>Отчёт за {html.escape(date_str)}</h2>"
     html_out += f"<p><b>Портфель:</b> {html.escape(str(data.get('portfolio', '—')))}</p>"
     html_out += f"<p><b>Баланс:</b> {float(data.get('free_rub', 0)):.2f} руб.</p>"
     html_out += f"<p><b>Статус:</b> {html.escape(str(data.get('status', '—')))}</p>"

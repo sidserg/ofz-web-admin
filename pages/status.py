@@ -10,17 +10,29 @@ REPO = 'sidserg/ofz-assistant-pro'
 def get_status_html():
     try:
         headers = {'Authorization': f'token {MY_TOKEN}', 'Accept': 'application/vnd.github.v3+json'}
-        r = requests.get(f'https://api.github.com/repos/{REPO}/contents/reports', headers=headers, timeout=10)
+        r = requests.get(f'https://api.github.com/repos/{REPO}/contents/reports', headers=headers, timeout=(5, 10))
         r.raise_for_status()
         files = r.json()
         if not files:
             return "<h2>Отчетов пока нет.</h2>"
         
         latest = sorted(files, key=lambda x: x["name"], reverse=True)[0]
-        file_data = requests.get(latest["download_url"], timeout=10).json()
+        file_data = requests.get(latest["download_url"], timeout=(5, 10)).json()
         
+        # Форматируем дату
+        raw_date = str(file_data.get('date', '—'))
+        try:
+            dt = raw_date.split('.')[0]
+            parts = dt.split(' ')
+            date_part = parts[0]
+            time_part = parts[1][:5]
+            y, m, d = date_part.split('-')
+            formatted_date = f"{time_part}    {d}-{m}-{y}"
+        except Exception:
+            formatted_date = raw_date
+
         html_str = f"<h2>Последний результат отработки</h2>"
-        html_str += f"<p><b>Дата:</b> {html.escape(str(file_data.get('date', '—')))}</p>"
+        html_str += f"<p><b>Дата:</b> {html.escape(formatted_date)}</p>"
         html_str += f"<p><b>Портфель:</b> {html.escape(str(file_data.get('portfolio', '—')))}</p>"
         html_str += f"<p><b>Баланс:</b> {float(file_data.get('free_rub', 0)):.2f} руб.</p>"
         html_str += f"<p><b>Статус:</b> {html.escape(str(file_data.get('status', '—')))}</p>"
@@ -46,6 +58,7 @@ def get_status_html():
                 p = float(a.get('price', 0))
                 html_str += f"<li>• {html.escape(str(a.get('ticker', '?')))} ({html.escape(str(a.get('name', '?')))}): {float(a.get('quantity', 0))} шт x {p:.2f} руб.</li>"
         html_str += "</ul>"
+        
         return html_str
     except Exception as e:
         return f"<h2 style='color:red'>Ошибка: {e}</h2>"

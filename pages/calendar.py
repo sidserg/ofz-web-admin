@@ -141,11 +141,13 @@ def get_calendar_html(request, pat: str) -> str:
     html_out += _render_year_nav(year)
 
     if day_str:
+        # Если выбран день, показываем ТОЛЬКО детали отчета
         html_out += _render_report_detail(day_str, pat)
-
-    html_out += '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px;">'
-    for month in range(1, 13):
-        html_out += _render_month(year, month, report_dates)
-    html_out += "</div>"
+    else:
+        # Если день не выбран, показываем сетку календаря
+        html_out += '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px;">'
+        for month in range(1, 13):
+            html_out += _render_month(year, month, report_dates)
+        html_out += "</div>"
 
     return html_out

@@ -32,7 +32,7 @@ def _get_github_files(pat: str, path: str) -> list[dict]:
 
 def _get_report_dates(pat: str, year: int) -> set:
     dates = set()
-    files = _get_github_files(pat, "reports")
+    files = _get_github_files(pat, f"reports/{get_token_hash()}")
     for f in files:
         name = f.get("name", "")
         if len(name) >= 10 and name[:4] == str(year):
@@ -45,7 +45,7 @@ def _get_report_dates(pat: str, year: int) -> set:
     return dates
 
 def _load_report_from_github(pat: str, date_str: str) -> dict | None:
-    files = _get_github_files(pat, "reports")
+    files = _get_github_files(pat, f"reports/{get_token_hash()}")
     for f in files:
         name = f.get("name", "")
         if name.startswith(date_str + "_"):
@@ -123,6 +123,15 @@ def _render_year_nav(year: int) -> str:
         <a href="/calendar?year={year + 1}" style="text-decoration: none; color: #3498db; font-weight: bold;">{year + 1} &raquo;</a>
     </div>
     '''
+
+
+def get_token_hash() -> str:
+    """Читает хэш токена из файла .tinkoff_hash."""
+    try:
+        with open('.tinkoff_hash', 'r') as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        return ''
 
 def get_calendar_html(request, pat: str) -> str:
     year_str = request.args.get("year", "")

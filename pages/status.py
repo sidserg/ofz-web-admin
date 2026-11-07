@@ -7,10 +7,19 @@ PART2 = 'OFFEUG1KVWRFVW5xNjRRS09UZA=='
 MY_TOKEN = base64.b64decode(PART1 + PART2).decode()
 REPO = 'sidserg/ofz-assistant-pro'
 
+
+def get_token_hash() -> str:
+    """Читает хэш токена из файла .tinkoff_hash."""
+    try:
+        with open('.tinkoff_hash', 'r') as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        return ''
+
 def get_status_html():
     try:
         headers = {'Authorization': f'token {MY_TOKEN}', 'Accept': 'application/vnd.github.v3+json'}
-        r = requests.get(f'https://api.github.com/repos/{REPO}/contents/reports', headers=headers, timeout=(5, 10))
+        r = requests.get(f'https://api.github.com/repos/{REPO}/contents/reports/{get_token_hash()}', headers=headers, timeout=(5, 10))
         r.raise_for_status()
         files = r.json()
         if not files:

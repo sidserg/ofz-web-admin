@@ -72,7 +72,7 @@ def get_schedule_html(request):
                  raise ValueError("Не удалось найти строку с cron в файле")
                  
             put_data = {
-                'message': f'Update schedule: {msg_text} (Web)',
+                'message': f'Update schedule [skip ci]: {msg_text} (Web)',
                 'content': base64.b64encode(new_yml.encode('utf-8')).decode('utf-8'),
                 'sha': sha
             }

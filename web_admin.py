@@ -68,7 +68,8 @@ HTML = """
 </head>
 <body>
     <div class="sidebar">
-        <h1>OFZ PRO</h1>
+        <h1 style="margin-bottom: 5px;">OFZ PRO</h1>
+        <div style="text-align: center; color: white; font-size: 14px; font-weight: bold; margin-bottom: 15px;">Елена</div>
         <a href="/status" class="{{ 'active' if request.path == '/status' else '' }}">Статус</a>
         <a href="/schedule" class="{{ 'active' if request.path == '/schedule' else '' }}">Расписание</a>
         <a href="/settings" class="{{ 'active' if request.path == '/settings' else '' }}">Настройки</a>

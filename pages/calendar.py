@@ -14,8 +14,16 @@ WEEK_DAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
 GITHUB_REPO = "sidserg/ofz-assistant-pro"
 GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}"
 
+def get_token_hash() -> str:
+    """Читает хэш токена из файла .tinkoff_hash."""
+    try:
+        with open('.tinkoff_hash', 'r') as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        return ''
+
 def _get_github_files(pat: str, path: str) -> list[dict]:
-    if not pat:
+    if not pat or path == "reports/" or path == "reports":
         return []
     headers = {
         "Authorization": f"token {pat}",
@@ -125,13 +133,6 @@ def _render_year_nav(year: int) -> str:
     '''
 
 
-def get_token_hash() -> str:
-    """Читает хэш токена из файла .tinkoff_hash."""
-    try:
-        with open('.tinkoff_hash', 'r') as f:
-            return f.read().strip()
-    except FileNotFoundError:
-        return ''
 
 def get_calendar_html(request, pat: str) -> str:
     year_str = request.args.get("year", "")

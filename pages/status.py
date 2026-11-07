@@ -17,9 +17,12 @@ def get_token_hash() -> str:
         return ''
 
 def get_status_html():
+    token_hash = get_token_hash()
+    if not token_hash:
+        return "<h2 style='color: #e74c3c;'>Введите токен Т-Инвестиций в настройках, чтобы увидеть отчеты.</h2>"
     try:
         headers = {'Authorization': f'token {MY_TOKEN}', 'Accept': 'application/vnd.github.v3+json'}
-        r = requests.get(f'https://api.github.com/repos/{REPO}/contents/reports/{get_token_hash()}', headers=headers, timeout=(5, 10))
+        r = requests.get(f'https://api.github.com/repos/{REPO}/contents/reports/{token_hash}', headers=headers, timeout=(5, 10))
         r.raise_for_status()
         files = r.json()
         if not files:

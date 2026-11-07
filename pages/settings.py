@@ -55,7 +55,7 @@ def _update_settings(form):
     config['create_portfolio'] = create_portfolio
     config['min_threshold_rub'] = min_threshold
     config['portfolio_creation_budget'] = budget
-    _save_config(config, sha, 'Update settings via Web Admin')
+    _save_config(config, sha, 'Update settings via Web Admin [skip ci]')
     return config
 
 

@@ -74,6 +74,7 @@ HTML = """
         <a href="/schedule" class="{{ 'active' if request.path == '/schedule' else '' }}">Расписание</a>
         <a href="/settings" class="{{ 'active' if request.path == '/settings' else '' }}">Настройки</a>
         <a href="/calendar" class="{{ 'active' if request.path == '/calendar' else '' }}">Календарь</a>
+        <a href="/run" style="margin-top: 20px; background: #27ae60; color: white; padding: 10px; border-radius: 4px; text-align: center; text-decoration: none; display: block;">Запуск</a>
     </div>
     <div class="main">
         <div class="content">
@@ -86,6 +87,45 @@ HTML = """
 
 def check_auth():
     return request.cookies.get('auth_token') == 'secret_007'
+
+
+import requests
+import base64
+
+
+@app.route('/run')
+def run_bot():
+    import requests
+    import base64
+    import time
+    
+    repo = 'sidserg/ofz-assistant-pro'
+    headers = {'Authorization': f'token {MY_TOKEN}', 'Accept': 'application/vnd.github.v3+json'}
+    
+    # Создаем или обновляем файл .trigger в репозитории бота
+    # Это гарантированно создаст коммит и запустит workflow
+    url = f'https://api.github.com/repos/{repo}/contents/.trigger'
+    
+    # Проверяем, существует ли файл
+    r = requests.get(url, headers=headers)
+    
+    content = str(time.time()) # Уникальное содержимое, чтобы файл всегда менялся
+    encoded_content = base64.b64encode(content.encode()).decode()
+    
+    if r.status_code == 200:
+        # Файл существует, обновляем
+        sha = r.json()['sha']
+        data = {'message': 'Manual run via Web Admin', 'content': encoded_content, 'sha': sha, 'branch': 'main'}
+        res = requests.put(url, headers=headers, json=data)
+    else:
+        # Файла нет, создаем
+        data = {'message': 'Manual run via Web Admin', 'content': encoded_content, 'branch': 'main'}
+        res = requests.put(url, headers=headers, json=data)
+    
+    if res.status_code in (200, 201):
+        return redirect(url_for('index'))
+    else:
+        return f'Ошибка запуска: {res.status_code} - {res.text}', 500
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():

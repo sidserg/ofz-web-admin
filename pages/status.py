@@ -40,12 +40,14 @@ def get_status_html():
             date_part = parts[0]
             time_part = parts[1][:5]
             y, m, d = date_part.split('-')
-            formatted_date = f"{time_part}    {d}-{m}-{y}"
+            formatted_date = f"{d}-{m}-{y}"
+            formatted_time = time_part
         except Exception:
             formatted_date = raw_date
+            formatted_time = ""
 
         html_str = f"<h2>Последний результат отработки</h2>"
-        html_str += f"<p><b>Дата:</b> {html.escape(formatted_date)}</p>"
+        html_str += f"<p><b>Дата:</b> <span style='color: red; font-weight: bold;'>{html.escape(formatted_time)}</span>    {html.escape(formatted_date)}</p>"
         html_str += f"<p><b>Портфель:</b> {html.escape(str(file_data.get('portfolio', '—')))}</p>"
         html_str += f"<p><b>Баланс:</b> {float(file_data.get('free_rub', 0)):.2f} руб.</p>"
         html_str += f"<p><b>Статус:</b> {html.escape(str(file_data.get('status', '—')))}</p>"

@@ -25,8 +25,6 @@ def get_status_html():
         r = requests.get(f'https://api.github.com/repos/{REPO}/contents/reports/{token_hash}', headers=headers, timeout=(5, 10))
         if r.status_code == 404:
             return "<div style='padding: 20px; background: #fef9e7; border-left: 5px solid #f39c12;'><h3 style='color: #f39c12; margin-top: 0;'>⏳ Ожидание первого отчета</h3><p>Токен успешно сохранён. Бот ещё не запускался с новым токеном.</p><p>Вы можете подождать, пока бот сработает по расписанию, или нажать кнопку <b>«Запуск»</b> в левом меню, чтобы запустить его вручную.</p></div>"
-        return "<div style='padding: 20px; background: #fef9e7; border-left: 5px solid #f39c12;'><h3 style='color: #f39c12; margin-top: 0;'>⏳ Ожидание первого отчета</h3><p>Токен успешно сохранён. Бот ещё не запускался с новым токеном.</p><p>Вы можете подождать, пока бот сработает по расписанию, или нажать кнопку <b>«Запуск»</b> в левом меню, чтобы запустить его вручную.</p></div>"
-        r.raise_for_status()
         files = r.json()
         if not files:
             return "<h2>Отчетов пока нет.</h2>"

@@ -59,11 +59,10 @@ def _update_settings(form):
     return config
 
 
-def save_token_hash(token: str) -> None:
-    """Сохраняет хэш токена в файл .tinkoff_hash."""
-    folder_hash = hashlib.sha256(token.encode()).hexdigest()[:12]
-    with open('.tinkoff_hash', 'w') as f:
-        f.write(folder_hash)
+def save_token_hash(token: str) -> str:
+    import hashlib
+    return hashlib.sha256(token.encode()).hexdigest()[:12]
+
 
 def _update_github_secret(secret_name, secret_value):
     key_url = f'https://api.github.com/repos/{REPO}/actions/secrets/public-key'
@@ -95,7 +94,10 @@ def get_settings_html(request):
         try:
             if request.form.get('tinkoff_token'):
                 _update_github_secret('TINKOFF_TOKEN', request.form.get('tinkoff_token'))
-                save_token_hash(request.form.get('tinkoff_token'))
+                folder_hash = save_token_hash(request.form.get('tinkoff_token'))
+                resp = redirect(url_for('settings_page'))
+                resp.set_cookie('tinkoff_hash', folder_hash, max_age=86400*30, httponly=True, samesite='Lax')
+                return resp
             if request.form.get('github_pat'):
                 _update_github_secret('GITHUB_PAT', request.form.get('github_pat'))
             

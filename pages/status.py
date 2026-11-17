@@ -9,12 +9,9 @@ REPO = 'sidserg/ofz-assistant-pro'
 
 
 def get_token_hash() -> str:
-    """Читает хэш токена из файла .tinkoff_hash."""
-    try:
-        with open('.tinkoff_hash', 'r') as f:
-            return f.read().strip()
-    except FileNotFoundError:
-        return ''
+    from flask import request
+    return request.cookies.get("tinkoff_hash", "")
+
 
 def get_status_html():
     token_hash = get_token_hash()

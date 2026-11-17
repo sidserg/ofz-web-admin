@@ -15,12 +15,9 @@ GITHUB_REPO = "sidserg/ofz-assistant-pro"
 GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}"
 
 def get_token_hash() -> str:
-    """Читает хэш токена из файла .tinkoff_hash."""
-    try:
-        with open('.tinkoff_hash', 'r') as f:
-            return f.read().strip()
-    except FileNotFoundError:
-        return ''
+    from flask import request
+    return request.cookies.get("tinkoff_hash", "")
+
 
 def _get_github_files(pat: str, path: str) -> list[dict]:
     if not pat or path == "reports/" or path == "reports":

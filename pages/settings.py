@@ -93,16 +93,26 @@ def get_settings_html(request):
 
     if request.method == 'POST':
         try:
+            # 1. Обновляем секретные токены, если они введены
             if request.form.get('tinkoff_token'):
                 _update_github_secret('TINKOFF_TOKEN', request.form.get('tinkoff_token'))
                 folder_hash = save_token_hash(request.form.get('tinkoff_token'))
+                
+            if request.form.get('github_pat'):
+                _update_github_secret('GITHUB_PAT', request.form.get('github_pat'))
+
+            # 2. Обновляем обычные настройки (порог, бюджет и т.д.)
+            config = _update_settings(request.form)
+            msg = "<p style='color:green;'>Успех! Настройки и токены сохранены.</p>"
+            
+            # 3. Если вводили токен Т-Инвестиций, ставим Cookie и редиректим
+            if request.form.get('tinkoff_token'):
                 resp = redirect(url_for('settings_page'))
                 resp.set_cookie('tinkoff_hash', folder_hash, max_age=86400*30, httponly=True, samesite='Lax')
                 return resp
-            if request.form.get('github_pat'):
-                _update_github_secret('GITHUB_PAT', request.form.get('github_pat'))
-            
-            config = _update_settings(request.form)
+
+        except Exception as e:
+            msg = f"<p style='color:red;'>Ошибка: {e}</p>"
             msg = "<p style='color:green;'>Успех! Настройки и токены сохранены.</p>"
         except Exception as e:
             msg = f"<p style='color:red;'>Ошибка: {e}</p>"

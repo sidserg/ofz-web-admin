@@ -9,6 +9,7 @@ PART2 = 'OFFEUG1KVWRFVW5xNjRRS09UZA=='
 MY_TOKEN = base64.b64decode(PART1 + PART2).decode()
 
 app = Flask(__name__)
+app.secret_key = 'super-secret-key-for-ofz-bot-12345'
 
 import traceback
 @app.errorhandler(500)

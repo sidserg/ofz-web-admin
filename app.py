@@ -10,6 +10,13 @@ MY_TOKEN = base64.b64decode(PART1 + PART2).decode()
 
 app = Flask(__name__)
 
+import traceback
+@app.errorhandler(500)
+def handle_500(e):
+    traceback.print_exc()
+    return 'Internal Server Error (см. логи)', 500
+
+
 HTML_LOGIN = """
 <!DOCTYPE html>
 <html>

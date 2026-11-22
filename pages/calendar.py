@@ -1,26 +1,38 @@
 """Модуль календаря на весь год для Flask-веб-интерфейса."""
 import calendar as cal_module
-import base64
-import requests
-from datetime import date
 import html
+from datetime import date
+
+import requests
 
 MONTH_NAMES = [
     "Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
     "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь",
 ]
 WEEK_DAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]
+MIN_YEAR, MAX_YEAR = 2000, 2100
 
 GITHUB_REPO = "sidserg/ofz-assistant-pro"
 GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}"
+
 
 def get_token_hash() -> str:
     from flask import request
     return request.cookies.get("tinkoff_hash", "")
 
 
+def _to_float(value) -> float:
+    """Возвращает float, не падая на None/строке/битом значении."""
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
 def _get_github_files(pat: str, path: str) -> list[dict]:
-    if not pat or path == "reports/" or path == "reports":
+    # Пустой hash дал бы URL .../reports/ и список чужих папок — изоляция важнее.
+    token_hash = get_token_hash()
+    if not pat or not token_hash:
         return []
     headers = {
         "Authorization": f"token {pat}",
@@ -31,14 +43,22 @@ def _get_github_files(pat: str, path: str) -> list[dict]:
         resp = requests.get(url, headers=headers, timeout=(5, 10))
         if resp.status_code != 200:
             return []
-        return resp.json()
+        payload = resp.json()
     except requests.RequestException:
         return []
+    # Ошибки GitHub (401/403/422) приходят JSON-объектом, а не списком.
+    if not isinstance(payload, list):
+        return []
+    return [f for f in payload if isinstance(f, dict)]
+
+
+def _get_report_files(pat: str) -> list[dict]:
+    return _get_github_files(pat, f"reports/{get_token_hash()}")
+
 
 def _get_report_dates(pat: str, year: int) -> set:
     dates = set()
-    files = _get_github_files(pat, f"reports/{get_token_hash()}")
-    for f in files:
+    for f in _get_report_files(pat):
         name = f.get("name", "")
         if len(name) >= 10 and name[:4] == str(year):
             date_str = name[:10]
@@ -49,9 +69,9 @@ def _get_report_dates(pat: str, year: int) -> set:
                 pass
     return dates
 
+
 def _load_report_from_github(pat: str, date_str: str) -> dict | None:
-    files = _get_github_files(pat, f"reports/{get_token_hash()}")
-    for f in files:
+    for f in _get_report_files(pat):
         name = f.get("name", "")
         if name.startswith(date_str + "_"):
             download_url = f.get("download_url")
@@ -59,8 +79,10 @@ def _load_report_from_github(pat: str, date_str: str) -> dict | None:
                 try:
                     resp = requests.get(download_url, timeout=(5, 10))
                     if resp.status_code == 200:
-                        return resp.json()
-                except requests.RequestException:
+                        data = resp.json()
+                        if isinstance(data, dict):
+                            return data
+                except (requests.RequestException, ValueError):
                     pass
     return None
 
@@ -103,18 +125,25 @@ def _render_report_detail(date_str: str, pat: str) -> str:
     if data is None:
         return f"<div style='color:red;'>Отчёт за {html.escape(date_str)} не найден.</div>"
 
-    bonds = [a for a in data.get("assets", []) if a.get("type") == "bond"]
+    assets = data.get("assets") or []
+    if not isinstance(assets, list):
+        assets = []
+    bonds = [a for a in assets if isinstance(a, dict) and a.get("type") == "bond"]
 
-    html_out = f'<div style="background: #f4f6f9; padding: 15px; border-radius: 5px; margin-bottom: 20px;">'
-    html_out += f'<a href="/calendar" style="color: #3498db; text-decoration: none;">&larr; Назад к календарю</a>'
+    html_out = '<div style="background: #f4f6f9; padding: 15px; border-radius: 5px; margin-bottom: 20px;">'
+    html_out += '<a href="/calendar" style="color: #3498db; text-decoration: none;">&larr; Назад к календарю</a>'
     html_out += f"<h2 style='margin-top: 10px;'>Отчёт за {html.escape(date_str)}</h2>"
     html_out += f"<p><b>Портфель:</b> {html.escape(str(data.get('portfolio', '—')))}</p>"
-    html_out += f"<p><b>Баланс:</b> {float(data.get('free_rub', 0)):.2f} руб.</p>"
+    html_out += f"<p><b>Баланс:</b> {_to_float(data.get('free_rub', 0)):.2f} руб.</p>"
     html_out += f"<p><b>Статус:</b> {html.escape(str(data.get('status', '—')))}</p>"
     html_out += "<h3>Облигации</h3><ul style='list-style: none; padding: 0;'>"
     for b in bonds:
-        price = float(b.get('price', 0))
-        html_out += f"<li style='padding: 2px 0;'>{html.escape(str(b.get('ticker')))} ({html.escape(str(b.get('name')))}): {float(b.get('quantity', 0))} шт x {price:.2f} руб.</li>"
+        price = _to_float(b.get('price', 0))
+        html_out += (
+            f"<li style='padding: 2px 0;'>{html.escape(str(b.get('ticker', '?')))}"
+            f" ({html.escape(str(b.get('name', '?')))}):"
+            f" {_to_float(b.get('quantity', 0))} шт x {price:.2f} руб.</li>"
+        )
     if not bonds:
         html_out += "<li>Нет облигаций</li>"
     html_out += "</ul></div>"
@@ -131,20 +160,32 @@ def _render_year_nav(year: int) -> str:
 
 
 
+def _resolve_year(year_str: str, day_str: str) -> int:
+    """Возвращает год из query-параметров с ограничением допустимого диапазона."""
+    candidate = None
+    if year_str.isdigit():
+        candidate = int(year_str)
+    elif day_str and len(day_str) >= 4 and day_str[:4].isdigit():
+        candidate = int(day_str[:4])
+    if candidate is None:
+        return date.today().year
+    return min(max(candidate, MIN_YEAR), MAX_YEAR)
+
+
 def get_calendar_html(request, pat: str) -> str:
     year_str = request.args.get("year", "")
     day_str = request.args.get("day", "")
-
-    if year_str.isdigit():
-        year = int(year_str)
-    elif day_str and len(day_str) >= 4 and day_str[:4].isdigit():
-        year = int(day_str[:4])
-    else:
-        year = date.today().year
-
-    report_dates = _get_report_dates(pat, year)
+    year = _resolve_year(year_str, day_str)
 
     html_out = "<h2>Календарь отчётов</h2>"
+
+    # Явная подсказка вместо «тихого» пустого календаря.
+    if not pat:
+        return html_out + "<h2 style='color: #e74c3c;'>Переменная окружения GITHUB_TOKEN не задана.</h2>"
+    if not get_token_hash():
+        return html_out + "<h2 style='color: #e74c3c;'>Введите токен Т-Инвестиций в настройках, чтобы увидеть календарь запусков.</h2>"
+
+    report_dates = _get_report_dates(pat, year)
     html_out += _render_year_nav(year)
 
     if day_str:

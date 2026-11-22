@@ -1,10 +1,12 @@
-import traceback
-from flask import redirect, url_for
-import requests
-import hashlib
-import os
 import base64
+import hashlib
+import html
 import json
+import os
+import traceback
+
+import requests
+from flask import flash, redirect, url_for
 from nacl import encoding, public
 
 GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN', '')
@@ -23,6 +25,8 @@ def _fetch_config():
     r = requests.get(API_URL, headers=HEADERS, timeout=(5, 10))
     r.raise_for_status()
     data = r.json()
+    if not isinstance(data, dict) or 'content' not in data or 'sha' not in data:
+        raise ValueError('GitHub API вернул неожиданную структуру для config.json')
     config = json.loads(base64.b64decode(data['content']).decode('utf-8'))
     if not isinstance(config, dict):
         raise ValueError('config.json must contain a JSON object')
@@ -47,11 +51,23 @@ def _parse_non_negative_int(value, name):
         raise ValueError(f"Поле '{name}' не может быть отрицательным")
     return number
 
-def _update_settings(form):
+def _update_settings(form, config, sha):
+    """Применяет поля формы к config и сохраняет его в GitHub.
+
+    Args:
+        form: Flask request.form с полями настроек.
+        config: конфигурация из _fetch_config().
+        sha: commit-sha config.json из того же ответа.
+
+    Returns:
+        dict: обновлённая конфигурация.
+
+    Raises:
+        ValueError: если числовые поля невалидны (до любой записи).
+    """
     create_portfolio = form.get('create_portfolio') == 'on'
     min_threshold = _parse_non_negative_int(form.get('min_threshold_rub'), 'min_threshold_rub')
     budget = _parse_non_negative_int(form.get('portfolio_creation_budget'), 'portfolio_creation_budget')
-    config, sha = _fetch_config()
     config['create_portfolio'] = create_portfolio
     config['min_threshold_rub'] = min_threshold
     config['portfolio_creation_budget'] = budget
@@ -84,17 +100,24 @@ def _update_github_secret(secret_name, secret_value):
 def get_settings_html(request):
     msg = ""
     config = dict(DEFAULTS)  # fallback по умолчанию
+    sha = None               # None означает, что config.json не загрузили
     try:
-        config, _sha = _fetch_config()
+        config, sha = _fetch_config()
     except Exception as e:
         traceback.print_exc()
-        msg = f"<p style='color:red;'>Не удалось загрузить текущие настройки: {e}</p>"
+        msg = f"<p style='color:red;'>Не удалось загрузить текущие настройки: {html.escape(str(e))}</p>"
 
     if request.method == 'POST':
+        tinkoff_token = request.form.get('tinkoff_token')
         try:
-            tinkoff_token = request.form.get('tinkoff_token')
+            # 1. Сначала обычные настройки: _update_settings валидирует поля
+            #    до любой записи, поэтому невалидная форма не тронет секреты.
+            if sha is None:
+                config, sha = _fetch_config()
+            config = _update_settings(request.form, config, sha)
 
-            # 1. Обновляем секретные токены, если они введены
+            # 2. Обновляем секретные токены, если они введены
+            folder_hash = ""
             if tinkoff_token:
                 _update_github_secret('TINKOFF_TOKEN', tinkoff_token)
                 folder_hash = save_token_hash(tinkoff_token)
@@ -102,30 +125,31 @@ def get_settings_html(request):
             if request.form.get('github_pat'):
                 _update_github_secret('GITHUB_PAT', request.form.get('github_pat'))
 
-            # 2. Обновляем обычные настройки (порог, бюджет и т.д.)
-            config = _update_settings(request.form)
-            msg = "<p style='color:green;'>Успех! Настройки и токены сохранены.</p>"
-
-            # 3. Если вводили токен Т-Инвестиций, ставим Cookie и редиректим
-            if tinkoff_token:
-                resp = redirect(url_for('settings_page'))
+        except Exception as e:
+            traceback.print_exc()
+            # Остались на форме без redirect: пользователь видит, что исправить.
+            msg = f"<p style='color:red;'>Ошибка при сохранении: {html.escape(str(e))}</p>"
+        else:
+            # Успех уходит через flash + redirect (PRG), иначе сообщение
+            # перезаписывалось бы следующим GET-запросом.
+            flash('Настройки и токены сохранены.', 'success')
+            resp = redirect(url_for('settings_page'))
+            if folder_hash:
                 resp.set_cookie(
                     'tinkoff_hash',
                     folder_hash,
                     max_age=86400 * 30,
                     httponly=True,
                     samesite='Lax',
-                    secure=True,
+                    # request.is_secure — property (Werkzeug >= 2.1).
+                    # На Amvera с ProxyFix даст True, на http://localhost — False.
+                    secure=request.is_secure,
                 )
-                return resp
-
-        except Exception as e:
-            traceback.print_exc()
-            msg = f"<p style='color:red;'>Ошибка при сохранении: {e}</p>"
+            return resp
 
     checked = "checked" if config.get('create_portfolio', DEFAULTS['create_portfolio']) else ""
-    min_threshold = config.get('min_threshold_rub', DEFAULTS['min_threshold_rub'])
-    budget = config.get('portfolio_creation_budget', DEFAULTS['portfolio_creation_budget'])
+    min_threshold = html.escape(str(config.get('min_threshold_rub', DEFAULTS['min_threshold_rub'])))
+    budget = html.escape(str(config.get('portfolio_creation_budget', DEFAULTS['portfolio_creation_budget'])))
 
     return f"""
     <h2>Настройки бота</h2>

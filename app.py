@@ -1,24 +1,31 @@
-import os
-import time
 import base64
-import traceback
+import os
+import secrets
+import time
 
 import requests
-from flask import Flask, request, redirect, url_for, render_template_string
-from pages.status import get_status_html
+from flask import Flask, Response, redirect, render_template_string, request, url_for
+from werkzeug.middleware.proxy_fix import ProxyFix
+
+from pages.calendar import get_calendar_html
 from pages.schedule import get_schedule_html
 from pages.settings import get_settings_html
-from pages.calendar import get_calendar_html
+from pages.status import get_status_html
 
 GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN', '')
+ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', '007')
+AUTH_TOKEN_VALUE = os.environ.get('AUTH_TOKEN', 'secret_007')
 
 app = Flask(__name__)
-app.secret_key = 'super-secret-key-for-ofz-bot-12345'
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'super-secret-key-for-ofz-bot-12345')
+# Amvera terminiert TLS am Reverse-Proxy. Ohne ProxyFix ist request.is_secure()
+# immer False, sodass secure-Cookies vom Browser verworfen werden.
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
 
 
 @app.errorhandler(500)
 def handle_500(e):
-    traceback.print_exc()
+    app.logger.exception('Unhandled application error')
     return 'Internal Server Error (см. логи)', 500
 
 
@@ -90,6 +97,11 @@ HTML = """
     </div>
     <div class="main">
         <div class="content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% for category, message in messages %}
+                    <p style="color: {{ '#27ae60' if category == 'success' else '#e74c3c' }}; font-weight: bold;">{{ message }}</p>
+                {% endfor %}
+            {% endwith %}
             {{ content|safe }}
         </div>
     </div>
@@ -98,7 +110,8 @@ HTML = """
 """
 
 def check_auth():
-    return request.cookies.get('auth_token') == 'secret_007'
+    cookie = request.cookies.get('auth_token', '')
+    return secrets.compare_digest(cookie, AUTH_TOKEN_VALUE)
 
 
 @app.route('/run')
@@ -110,33 +123,38 @@ def run_bot():
     # Это гарантированно создаст коммит и запустит workflow
     url = f'https://api.github.com/repos/{repo}/contents/.trigger'
 
-    # Проверяем, существует ли файл
-    r = requests.get(url, headers=headers, timeout=(5, 10))
-
-    content = str(time.time()) # Уникальное содержимое, чтобы файл всегда менялся
+    content = str(time.time())  # Уникальное содержимое, чтобы файл всегда менялся
     encoded_content = base64.b64encode(content.encode()).decode()
 
-    if r.status_code == 200:
-        # Файл существует, обновляем
-        sha = r.json()['sha']
-        data = {'message': 'Manual run via Web Admin', 'content': encoded_content, 'sha': sha, 'branch': 'main'}
-        res = requests.put(url, headers=headers, json=data, timeout=(5, 10))
-    else:
-        # Файла нет, создаем
+    try:
+        # Проверяем, существует ли файл
+        r = requests.get(url, headers=headers, timeout=(5, 10))
         data = {'message': 'Manual run via Web Admin', 'content': encoded_content, 'branch': 'main'}
+        if r.status_code == 200:
+            # Файл существует, обновляем (sha обязателен, иначе GitHub ответит 409)
+            data['sha'] = r.json()['sha']
         res = requests.put(url, headers=headers, json=data, timeout=(5, 10))
+    except (requests.RequestException, KeyError, ValueError) as exc:
+        app.logger.exception('Failed to trigger bot run')
+        return f'Ошибка запуска: {exc}', 502
 
     if res.status_code in (200, 201):
         return redirect(url_for('index'))
-    else:
-        return f'Ошибка запуска: {res.status_code} - {res.text}', 500
+    return f'Ошибка запуска: {res.status_code} - {res.text}', 500
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        if request.form.get('password') == '007':
+        if secrets.compare_digest(request.form.get('password', ''), ADMIN_PASSWORD):
             resp = redirect(url_for('index'))
-            resp.set_cookie('auth_token', 'secret_007', max_age=86400*30)
+            resp.set_cookie(
+                'auth_token',
+                AUTH_TOKEN_VALUE,
+                max_age=86400 * 30,
+                httponly=True,
+                samesite='Lax',
+                secure=request.is_secure,
+            )
             return resp
         else:
             return HTML_LOGIN.replace('</h2>', '</h2><p style="color:red">Неверный пароль</p>')
@@ -176,6 +194,11 @@ def settings_page():
         content = get_settings_html(request)
     except Exception as e:
         content = f"<h2 style='color:red'>Ошибка настроек: {e}</h2>"
+    # get_settings_html при успехе возвращает готовый Response (redirect +
+    # cookie), а не HTML-строку. Подставлять такой объект в шаблон нельзя —
+    # Jinja приводит его к строке и страница становится пустой.
+    if isinstance(content, Response):
+        return content
     return render_template_string(HTML, content=content, request=request)
 
 @app.route('/calendar')

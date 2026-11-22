@@ -1,10 +1,9 @@
+import os
 import requests
 import base64
 import html
 
-PART1 = 'Z2hwX2pQanAyS3FKMDdia3drYWIz'
-PART2 = 'OFFEUG1KVWRFVW5xNjRRS09UZA=='
-MY_TOKEN = base64.b64decode(PART1 + PART2).decode()
+GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN', '')
 REPO = 'sidserg/ofz-assistant-pro'
 
 
@@ -18,7 +17,7 @@ def get_status_html():
     if not token_hash:
         return "<h2 style='color: #e74c3c;'>Введите токен Т-Инвестиций в настройках, чтобы увидеть отчеты.</h2>"
     try:
-        headers = {'Authorization': f'token {MY_TOKEN}', 'Accept': 'application/vnd.github.v3+json'}
+        headers = {'Authorization': f'token {GITHUB_TOKEN}', 'Accept': 'application/vnd.github.v3+json'}
         r = requests.get(f'https://api.github.com/repos/{REPO}/contents/reports/{token_hash}', headers=headers, timeout=(5, 10))
         if r.status_code == 404:
             return "<div style='padding: 20px; background: #fef9e7; border-left: 5px solid #f39c12;'><h3 style='color: #f39c12; margin-top: 0;'>⏳ Ожидание первого отчета</h3><p>Токен успешно сохранён. Бот ещё не запускался с новым токеном.</p><p>Вы можете подождать, пока бот сработает по расписанию, или нажать кнопку <b>«Запуск»</b> в левом меню, чтобы запустить его вручную.</p></div>"

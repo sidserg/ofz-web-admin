@@ -1,17 +1,21 @@
+import os
+import time
+import base64
+import traceback
+
+import requests
 from flask import Flask, request, redirect, url_for, render_template_string
 from pages.status import get_status_html
 from pages.schedule import get_schedule_html
 from pages.settings import get_settings_html
 from pages.calendar import get_calendar_html
-import base64
-PART1 = 'Z2hwX2pQanAyS3FKMDdia3drYWIz'
-PART2 = 'OFFEUG1KVWRFVW5xNjRRS09UZA=='
-MY_TOKEN = base64.b64decode(PART1 + PART2).decode()
+
+GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN', '')
 
 app = Flask(__name__)
 app.secret_key = 'super-secret-key-for-ofz-bot-12345'
 
-import traceback
+
 @app.errorhandler(500)
 def handle_500(e):
     traceback.print_exc()
@@ -97,39 +101,31 @@ def check_auth():
     return request.cookies.get('auth_token') == 'secret_007'
 
 
-import requests
-import base64
-
-
 @app.route('/run')
 def run_bot():
-    import requests
-    import base64
-    import time
-    
     repo = 'sidserg/ofz-assistant-pro'
-    headers = {'Authorization': f'token {MY_TOKEN}', 'Accept': 'application/vnd.github.v3+json'}
-    
+    headers = {'Authorization': f'token {GITHUB_TOKEN}', 'Accept': 'application/vnd.github.v3+json'}
+
     # Создаем или обновляем файл .trigger в репозитории бота
     # Это гарантированно создаст коммит и запустит workflow
     url = f'https://api.github.com/repos/{repo}/contents/.trigger'
-    
+
     # Проверяем, существует ли файл
-    r = requests.get(url, headers=headers)
-    
+    r = requests.get(url, headers=headers, timeout=(5, 10))
+
     content = str(time.time()) # Уникальное содержимое, чтобы файл всегда менялся
     encoded_content = base64.b64encode(content.encode()).decode()
-    
+
     if r.status_code == 200:
         # Файл существует, обновляем
         sha = r.json()['sha']
         data = {'message': 'Manual run via Web Admin', 'content': encoded_content, 'sha': sha, 'branch': 'main'}
-        res = requests.put(url, headers=headers, json=data)
+        res = requests.put(url, headers=headers, json=data, timeout=(5, 10))
     else:
         # Файла нет, создаем
         data = {'message': 'Manual run via Web Admin', 'content': encoded_content, 'branch': 'main'}
-        res = requests.put(url, headers=headers, json=data)
-    
+        res = requests.put(url, headers=headers, json=data, timeout=(5, 10))
+
     if res.status_code in (200, 201):
         return redirect(url_for('index'))
     else:
@@ -187,7 +183,7 @@ def calendar_page():
     if not check_auth():
         return redirect(url_for('login'))
     try:
-        content = get_calendar_html(request, MY_TOKEN)
+        content = get_calendar_html(request, GITHUB_TOKEN)
     except Exception as e:
         content = f"<h2 style='color:red'>Ошибка календаря: {e}</h2>"
     return render_template_string(HTML, content=content, request=request)

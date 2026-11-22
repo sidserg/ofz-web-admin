@@ -1,10 +1,9 @@
+import os
 import requests
 import base64
 import re
 
-PART1 = 'Z2hwX2pQanAyS3FKMDdia3drYWIz'
-PART2 = 'OFFEUG1KVWRFVW5xNjRRS09UZA=='
-MY_TOKEN = base64.b64decode(PART1 + PART2).decode()
+GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN', '')
 REPO = 'sidserg/ofz-assistant-pro'
 
 def get_schedule_html(request):
@@ -13,7 +12,7 @@ def get_schedule_html(request):
     h_msk, m = 20, 0
     
     try:
-        headers = {'Authorization': f'token {MY_TOKEN}', 'Accept': 'application/vnd.github.v3+json'}
+        headers = {'Authorization': f'token {GITHUB_TOKEN}', 'Accept': 'application/vnd.github.v3+json'}
         url = f'https://api.github.com/repos/{REPO}/contents/.github/workflows/bot.yml'
         r = requests.get(url, headers=headers, timeout=(5, 10))
         r.raise_for_status()

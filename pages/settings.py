@@ -7,13 +7,11 @@ import base64
 import json
 from nacl import encoding, public
 
-PART1 = 'Z2hwX2pQanAyS3FKMDdia3drYWIz'
-PART2 = 'OFFEUG1KVWRFVW5xNjRRS09UZA=='
-MY_TOKEN = base64.b64decode(PART1 + PART2).decode()
+GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN', '')
 REPO = 'sidserg/ofz-assistant-pro'
 CONFIG_PATH = 'config.json'
 API_URL = f'https://api.github.com/repos/{REPO}/contents/{CONFIG_PATH}'
-HEADERS = {'Authorization': f'token {MY_TOKEN}', 'Accept': 'application/vnd.github.v3+json'}
+HEADERS = {'Authorization': f'token {GITHUB_TOKEN}', 'Accept': 'application/vnd.github.v3+json'}
 
 DEFAULTS = {
     'create_portfolio': False,
@@ -62,7 +60,6 @@ def _update_settings(form):
 
 
 def save_token_hash(token: str) -> str:
-    import hashlib
     return hashlib.sha256(token.encode()).hexdigest()[:12]
 
 
@@ -112,7 +109,14 @@ def get_settings_html(request):
             # 3. Если вводили токен Т-Инвестиций, ставим Cookie и редиректим
             if tinkoff_token:
                 resp = redirect(url_for('settings_page'))
-                resp.set_cookie('tinkoff_hash', folder_hash, max_age=86400*30, httponly=True, samesite='Lax')
+                resp.set_cookie(
+                    'tinkoff_hash',
+                    folder_hash,
+                    max_age=86400 * 30,
+                    httponly=True,
+                    samesite='Lax',
+                    secure=True,
+                )
                 return resp
 
         except Exception as e:

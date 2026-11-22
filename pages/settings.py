@@ -89,7 +89,7 @@ def get_settings_html(request):
     try:
         config, _sha = _fetch_config()
     except Exception as e:
-            traceback.print_exc()
+        print(f"Ошибка загрузки настроек: {e}")
         config = dict(DEFAULTS)
         msg = f"<p style='color:red;'>Не удалось загрузить текущие настройки: {e}</p>"
 
@@ -114,11 +114,9 @@ def get_settings_html(request):
                 return resp
 
         except Exception as e:
-            traceback.print_exc()
             msg = f"<p style='color:red;'>Ошибка: {e}</p>"
             msg = "<p style='color:green;'>Успех! Настройки и токены сохранены.</p>"
         except Exception as e:
-            traceback.print_exc()
             msg = f"<p style='color:red;'>Ошибка: {e}</p>"
 
     checked = "checked" if config.get('create_portfolio', DEFAULTS['create_portfolio']) else ""
